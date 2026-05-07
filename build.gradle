@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id 'application'
+    // ปลั๊กอิน JavaFX ช่วยให้จัดการ Library ได้ง่ายขึ้นมาก
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group 'project'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral() // แหล่งโหลด Library มาตรฐาน
+}
+
+javafx {
+    version = '21.0.2'
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.media']
+}
+
+dependencies {
+    // ถ้าอนาคตอยากใช้ JSON เก็บค่าพลังตัวละคร ให้เพิ่มตรงนี้
+    // implementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources'] // ใช้อันนี้ถูกต้องแล้วครับถ้าเก็บรูปไว้ในนี้
+        }
+    }
+}
+
+application {
+    // 🌟 แก้ตรงนี้! ต้องเป็นคลาสหลักที่มีคำสั่ง public static void main
+    // สมมติว่าคลาสหลักชื่อ Main และอยู่ใน package application (ลองเช็คในโปรเจกต์คุณดูนะครับ)
+    mainClass = 'application.Main'
+}
