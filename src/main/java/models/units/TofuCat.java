@@ -8,7 +8,7 @@ import java.util.Objects;
 public class TofuCat extends AoeUnit {
 
     public TofuCat() {
-        super("Tofu Cat", 970, 400, 2, 2000, 60, -2);
+        super("Tofu Cat", 2300, 400, 2, 2000, 40, -2);
         try {
             // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/tofuCat/001_c_1.png")));
@@ -29,7 +29,7 @@ public class TofuCat extends AoeUnit {
     }
 
     public double getRenderWidth() {
-        return 80;
+        return 150;
     }
 
     public double getRenderHeight() {

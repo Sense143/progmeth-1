@@ -16,6 +16,8 @@ public abstract class Unit implements Attackable {
     protected boolean isAttacking;
     protected boolean isAoe;
     protected long lastAttackTime = 0;
+    protected long timeOfDeath = 0;
+    protected double attackRangeMin = 0;
 
     // 🌟 สร้างสถานะของตัวละคร (เดิน, โจมตี, รอคูลดาวน์)
     public enum State { WALK, ATTACK, IDLE }
@@ -54,6 +56,14 @@ public abstract class Unit implements Attackable {
     public void setX(double x) { this.x = x; }
     public double getAttackRange() { return attackRange; }
     public void setAttackRange(double attackRange) { this.attackRange = attackRange; }
+
+    public double getAttackRangeMin() {
+        return attackRangeMin;
+    }
+
+    public double getSpeed() {
+        return speed;
+    }
 
     public abstract void update();
 

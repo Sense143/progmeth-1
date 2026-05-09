@@ -26,15 +26,12 @@ import models.base.Tower;
 import models.base.Unit;
 import models.enemies.DogTower;
 import models.stages.Japan;
-import models.units.Cat1;
+import models.units.*;
 import logic.BattleManager;
-import models.units.CatTower;
 
 // --- Import คลาสระบบด่านเข้ามาเพิ่ม ---
 import models.stages.GameStage;
 import models.stages.Korea;
-import models.units.KnightCat;
-import models.units.TofuCat;
 import ui.CatButton;
 
 import java.util.ArrayList;
@@ -55,11 +52,17 @@ public class Main extends Application {
 
     private GameStage selectedStage;
 
+    // 🌟 ตัวแปรระบบกล้อง (Camera)
+    private final double WORLD_WIDTH = 2500;  // ความยาวของด่านทั้งหมด (ปรับให้ยาวขึ้นหรือสั้นลงได้)
+    private final double SCREEN_WIDTH = 1000; // ความกว้างของหน้าจอ
+    private double cameraX = 0;
+    private double dragLastX = 0;
+
     @Override
     public void start(Stage primaryStage) {
         root = new StackPane();
         showMainMenu();
-        Scene scene = new Scene(root, 1000, 600);
+        Scene scene = new Scene(root, SCREEN_WIDTH, 600);
         primaryStage.setTitle("Battle Cat - Complete Edition");
         primaryStage.setScene(scene);
         primaryStage.setOnCloseRequest(e -> running = false);
@@ -74,9 +77,25 @@ public class Main extends Application {
         isPaused = false;
         running = true;
 
+        // 🌟 ตั้งค่ากล้องเริ่มต้นให้อยู่ฝั่งฐานเรา (ฝั่งขวาสุด)
+        cameraX = WORLD_WIDTH - SCREEN_WIDTH;
+
         // 2. สร้างพื้นที่วาดกราฟิก (Canvas)
-        Canvas canvas = new Canvas(1000, 600);
+        Canvas canvas = new Canvas(SCREEN_WIDTH, 600);
         GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        // 🌟 เพิ่มระบบเลื่อนกล้องด้วยการคลิกลากเมาส์
+        canvas.setOnMousePressed(e -> dragLastX = e.getSceneX());
+        canvas.setOnMouseDragged(e -> {
+            double deltaX = dragLastX - e.getSceneX();
+            cameraX += deltaX;
+
+            // ล็อกกล้องไม่ให้เลื่อนทะลุขอบด่าน
+            if (cameraX < 0) cameraX = 0;
+            if (cameraX > WORLD_WIDTH - SCREEN_WIDTH) cameraX = WORLD_WIDTH - SCREEN_WIDTH;
+
+            dragLastX = e.getSceneX();
+        });
 
         // 3. สร้างเลเยอร์สำหรับวาง UI (ปุ่ม, ข้อความ)
         gameUI = new BorderPane();
@@ -117,16 +136,17 @@ public class Main extends Application {
         Region spacer1 = new Region();
         HBox.setHgrow(spacer1, Priority.ALWAYS);
 
-        // 5.2 🌟 กลุ่มปุ่มแมว (ตรงกลาง) - สั้นลงและเป็นระเบียบมาก!
+        // 5.2 กลุ่มปุ่มแมว (ตรงกลาง)
         HBox catsBox = new HBox(10);
         catsBox.setAlignment(Pos.BOTTOM_CENTER);
 
-        // สร้างปุ่มแมวตัวที่ 1 (ใช้คลาส CatButton ที่เราแยกไว้)
         CatButton cat1Btn = new CatButton("/cat/icon/uni000_f00.png", 2.5, () -> spawnPlayerUnit(new Cat1()));
         CatButton tofuBtn = new CatButton("/cat/icon/uni001_c00.png", 2.5, () -> spawnPlayerUnit(new TofuCat()));
         CatButton knightBtn = new CatButton("/cat/icon/uni002_c00.png", 5, () -> spawnPlayerUnit(new KnightCat()));
+        CatButton fishBtn = new CatButton("/cat/icon/uni006_f00.png", 12, () -> spawnPlayerUnit(new FishCat()));
+        CatButton ufoBtn = new CatButton("/cat/icon/uni005_c00.png", 15, () -> spawnPlayerUnit(new UFOCat()));
 
-        catsBox.getChildren().addAll(cat1Btn, tofuBtn, knightBtn);
+        catsBox.getChildren().addAll(cat1Btn, tofuBtn, knightBtn, fishBtn, ufoBtn);
 
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
@@ -136,7 +156,6 @@ public class Main extends Application {
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
 
-        // นำปุ่มทั้งหมดประกอบลงแถบด้านล่าง
         bottomTray.getChildren().addAll(levelUpBtn, spacer1, catsBox, spacer2, cannonBtn);
         gameUI.setBottom(bottomTray);
 
@@ -178,6 +197,7 @@ public class Main extends Application {
             selectedStage.updateStage(units);
         }
 
+
         for (int i = units.size() - 1; i >= 0; i--) {
             Unit u = units.get(i);
             u.update();
@@ -193,78 +213,72 @@ public class Main extends Application {
     }
 
     private void render(GraphicsContext gc) {
+        // 🌟 วาดพื้นหลัง โดยหักลบตำแหน่งกล้อง (-cameraX) และวาดให้กว้างเท่า WORLD_WIDTH
         if (selectedStage != null && selectedStage.getBackgroundImage() != null) {
-            gc.drawImage(selectedStage.getBackgroundImage(), 0, 0, 1000, 600);
+            gc.drawImage(selectedStage.getBackgroundImage(), -cameraX, 0, WORLD_WIDTH, 600);
         } else {
             gc.setFill(Color.WHITESMOKE);
-            gc.fillRect(0, 0, 1000, 600);
+            gc.fillRect(0, 0, SCREEN_WIDTH, 600);
         }
 
         double groundY = 410;
 
         for (Unit u : units) {
-            // ป้อม
+            // 🌟 คำนวณตำแหน่ง X สำหรับวาดบนจอ โดยเอาพิกัดจริงลบด้วยพิกัดกล้อง
+            double drawX = u.getX() - cameraX;
+
+            // --- ป้อม ---
             if (u instanceof Tower) {
-                double towerWidth = 80;
-                double towerHeight = 150;
+                double towerWidth = u.getRenderWidth() > 0 ? u.getRenderWidth() : 80;
+                double towerHeight = u.getRenderHeight() > 0 ? u.getRenderHeight() : 150;
                 double towerY = groundY - towerHeight;
 
                 // วาดตัวป้อม
                 if (u instanceof CatTower) gc.setFill(Color.DARKBLUE);
                 else gc.setFill(Color.DARKRED);
-                gc.fillRect(u.getX(), towerY, towerWidth, towerHeight);
+                gc.fillRect(drawX, towerY, towerWidth, towerHeight);
 
-                // --- 🌟 วาดตัวเลขเลือดบนหัวป้อม ---
-
+                // 🌟 วาดตัวเลขเลือดบนหัวป้อม
                 double currentHp = u.getHp();
                 double maxHp = ((Tower) u).getMaxHp();
-                String hpText = currentHp + " / " + maxHp;
+                String hpText = (int)currentHp + " / " + (int)maxHp;
 
-                // 2. ตั้งค่าฟอนต์ (ตัวหนา ขนาด 16)
                 gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 16));
-
-                // 3. ตั้งให้ข้อความอยู่ตรงกลาง (Center) เพื่อความสวยงาม
                 gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
 
-                // คำนวณพิกัด X ให้อยู่กึ่งกลางป้อม และ Y ให้ลอยอยู่บนหัวป้อม 10 พิกเซล
-                double textX = u.getX() + (towerWidth / 2);
+                double textX = drawX + (towerWidth / 2);
                 double textY = towerY - 10;
 
-                // 4. วาดขอบตัวเลขสีดำ (ให้อ่านง่ายขึ้นเวลาฉากหลังสีสว่าง)
                 gc.setStroke(Color.BLACK);
                 gc.setLineWidth(3);
                 gc.strokeText(hpText, textX, textY);
 
-                // 5. วาดตัวเลขสีขาวทับลงไปตรงกลาง
                 gc.setFill(Color.WHITE);
                 gc.fillText(hpText, textX, textY);
 
-                // ⚠️ สำคัญ: รีเซ็ตการจัดหน้ากลับเป็นด้านซ้าย (Left) เพื่อไม่ให้กระทบกับการวาดรูปอื่นๆ
                 gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
             }
-            // ยูนิตทหาร (วาดเป็นแอนิเมชัน)
+            // --- ยูนิตทหาร (แมว & ศัตรู) ---
             else {
-                // 🌟 แก้ไขตรงนี้: ให้ดึงขนาดมาจากตัวแปรของ Unit นั้นๆ
-                double unitWidth = 80;  // ค่าเริ่มต้นเผื่อ Unit ลืมใส่
-                double unitHeight = 80; // ค่าเริ่มต้นเผื่อ Unit ลืมใส่
+                double unitWidth = u.getRenderWidth();
+                double unitHeight = u.getRenderHeight();
+                double unitY = groundY - unitHeight;
 
-                unitWidth = u.getRenderWidth();
-                unitHeight = u.getRenderHeight();
-
-                double unitY = groundY - unitHeight; // ตำแหน่ง Y จะอิงตามความสูงของตัวละคร
+                if(u instanceof UFOCat){
+                    unitY -= 50;
+                }
 
                 Image sprite = u.getCurrentSprite();
 
                 if (sprite != null) {
-                    // วาดรูปตามสถานะปัจจุบันและขนาดของตัวมันเอง
-                    gc.drawImage(sprite, u.getX(), unitY, unitWidth, unitHeight);
+                    gc.drawImage(sprite, drawX, unitY, unitWidth, unitHeight);
                 } else {
-                    // ถ้าหาภาพไม่เจอจริงๆ ให้วาดสี่เหลี่ยมสำรอง
                     gc.setFill(Color.TOMATO);
-                    gc.fillRect(u.getX(), unitY, unitWidth, unitHeight);
+                    gc.fillRect(drawX, unitY, unitWidth, unitHeight);
                 }
             }
         }
+        logic.EffectManager.getInstance().drawAll(gc, cameraX);
     }
 
     private void showPauseOverlay() {

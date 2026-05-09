@@ -19,7 +19,7 @@ public class BattleManager {
         ArrayList<Unit> targets = new ArrayList<>();
         for (Unit target : potentialTargets) {
             double distance = Math.abs(attacker.getX() - target.getX());
-            if (distance <= attacker.getAttackRange()) {
+            if (distance <= attacker.getAttackRange() && distance >= attacker.getAttackRangeMin()) {
                 targets.add(target);
             }
         }

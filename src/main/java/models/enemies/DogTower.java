@@ -5,6 +5,6 @@ import models.base.Tower;
 public class DogTower extends Tower {
 
     public DogTower(double hp) {
-        super("Dog Tower", 10, hp);
+        super("Dog Tower", 50, hp);
     }
 }

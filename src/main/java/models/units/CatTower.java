@@ -5,6 +5,6 @@ import models.base.Tower;
 public class CatTower extends Tower {
 
     public CatTower() {
-        super("Cat Tower", 900, 2000);
+        super("Cat Tower", 2350, 2000);
     }
 }

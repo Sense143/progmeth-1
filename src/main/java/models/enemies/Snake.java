@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Snake extends SingleTargetUnit {
 
     public Snake() {
-        super("Snake", 30, 200, 10, 1500, 100, 4);
+        super("Snake", 60, 200, 10, 1500, 100, 4);
         try {
             // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/snake/snake_1.png")));
