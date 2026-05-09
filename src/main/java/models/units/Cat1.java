@@ -28,4 +28,12 @@ public class Cat1 extends SingleTargetUnit{
         }
     }
 
+    public double getRenderWidth() {
+        return 80;
+    }
+
+    public double getRenderHeight() {
+        return 80;
+    }
+
 }

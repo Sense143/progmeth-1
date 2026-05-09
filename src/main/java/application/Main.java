@@ -33,6 +33,9 @@ import models.units.CatTower;
 // --- Import คลาสระบบด่านเข้ามาเพิ่ม ---
 import models.stages.GameStage;
 import models.stages.Korea;
+import models.units.KnightCat;
+import models.units.TofuCat;
+import ui.CatButton;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -64,19 +67,22 @@ public class Main extends Application {
     }
 
     private void showGameScene() {
+        // 1. เคลียร์ข้อมูลเก่าและตั้งค่าเริ่มต้น
         root.getChildren().clear();
         units.clear();
         BattleManager.getInstance().clearAll();
         isPaused = false;
         running = true;
 
+        // 2. สร้างพื้นที่วาดกราฟิก (Canvas)
         Canvas canvas = new Canvas(1000, 600);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
+        // 3. สร้างเลเยอร์สำหรับวาง UI (ปุ่ม, ข้อความ)
         gameUI = new BorderPane();
         gameUI.setPickOnBounds(false);
 
-        // --- แถบด้านบน ---
+        // --- 4. แถบด้านบน (Top Bar) ---
         HBox topBar = new HBox(10);
         topBar.setPadding(new Insets(15));
         topBar.setAlignment(Pos.CENTER_LEFT);
@@ -88,7 +94,7 @@ public class Main extends Application {
         stageNameLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: black;");
 
         Region topSpacer = new Region();
-        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        HBox.setHgrow(topSpacer, Priority.ALWAYS); // ดันให้เงินไปอยู่ขวาสุด
 
         Label moneyLabel = new Label("40/150");
         moneyLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
@@ -96,12 +102,12 @@ public class Main extends Application {
         topBar.getChildren().addAll(pauseButton, stageNameLabel, topSpacer, moneyLabel);
         gameUI.setTop(topBar);
 
-        // --- แถบด้านล่าง ---
+        // --- 5. แถบด้านล่าง (Bottom Tray) ---
         HBox bottomTray = new HBox(10);
         bottomTray.setPadding(new Insets(30, 30, 10, 30));
         bottomTray.setAlignment(Pos.BOTTOM_LEFT);
 
-        // 1. ปุ่ม Level UP
+        // 5.1 ปุ่ม Level UP (ซ้ายสุด)
         Button levelUpBtn = createImageButton("/button/moneyBTN_1.png", 150, 150, e -> {
             System.out.println("Level UP!");
         });
@@ -111,92 +117,30 @@ public class Main extends Application {
         Region spacer1 = new Region();
         HBox.setHgrow(spacer1, Priority.ALWAYS);
 
-        // 2. 🌟 กลุ่มปุ่มแมว (Cooldown แบบหลอดโหลดสี่เหลี่ยมเล็กๆ ด้านล่าง)
+        // 5.2 🌟 กลุ่มปุ่มแมว (ตรงกลาง) - สั้นลงและเป็นระเบียบมาก!
         HBox catsBox = new HBox(10);
         catsBox.setAlignment(Pos.BOTTOM_CENTER);
 
-        // --- เริ่มสร้างปุ่มแมว ---
-        StackPane cat1BtnContainer = new StackPane();
-        cat1BtnContainer.setTranslateY(30);
-        cat1BtnContainer.setCursor(Cursor.HAND);
+        // สร้างปุ่มแมวตัวที่ 1 (ใช้คลาส CatButton ที่เราแยกไว้)
+        CatButton cat1Btn = new CatButton("/cat/icon/uni000_f00.png", 2.5, () -> spawnPlayerUnit(new Cat1()));
+        CatButton tofuBtn = new CatButton("/cat/icon/uni001_c00.png", 2.5, () -> spawnPlayerUnit(new TofuCat()));
+        CatButton knightBtn = new CatButton("/cat/icon/uni002_c00.png", 5, () -> spawnPlayerUnit(new KnightCat()));
 
-        double imgW = 110;
-        double imgH = 110;
-
-        // 2.1 รูปไอคอนแมว
-        javafx.scene.image.ImageView catIcon = null;
-        try {
-            catIcon = new javafx.scene.image.ImageView(new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/icon/uni000_f00.png"))));
-            catIcon.setFitWidth(imgW);
-            catIcon.setFitHeight(imgH);
-            catIcon.setPreserveRatio(false);
-        } catch (Exception err) { System.err.println("หาภาพไอคอนแมวไม่เจอ!"); }
-
-        // 2.2 แผ่นฟิล์มสีดำจางๆ ทับรูปไว้บางๆ ตอนคูลดาวน์ (ให้หลอดดูเด่นขึ้น)
-        javafx.scene.shape.Rectangle cooldownDim = new javafx.scene.shape.Rectangle(imgW, imgH);
-        cooldownDim.setFill(Color.color(0, 0, 0, 0.4));
-        cooldownDim.setOpacity(0.0); // เริ่มต้นแบบสว่าง (พร้อมกด)
-
-        // 2.3 🌟 พื้นหลังของหลอดคูลดาวน์ (สีเทาดำ)
-        javafx.scene.shape.Rectangle barBackground = new javafx.scene.shape.Rectangle(imgW, 10); // สูงแค่ 10px
-        barBackground.setFill(Color.color(0, 0, 0, 0.6));
-        StackPane.setAlignment(barBackground, Pos.BOTTOM_CENTER); // ให้อยู่ชิดขอบล่าง
-        barBackground.setOpacity(0.0); // ซ่อนไว้ก่อน
-
-        // 2.4 🌟 หลอดสีคูลดาวน์ (เช่น สีเหลือง หรือ สีฟ้า)
-        javafx.scene.shape.Rectangle cooldownBar = new javafx.scene.shape.Rectangle(imgW, 10);
-        cooldownBar.setFill(Color.CYAN); // เปลี่ยนสีหลอดตรงนี้ได้ครับ (เช่น Color.LIGHTGREEN, Color.YELLOW)
-        StackPane.setAlignment(cooldownBar, Pos.BOTTOM_LEFT); // ให้จุดเริ่มต้นอยู่ซ้ายล่าง จะได้วิ่งไปขวา
-
-        if (catIcon != null) {
-            // เอาทุกอย่างมาซ้อนกัน: รูป -> แผ่นฟิล์ม -> พื้นหลังหลอด -> หลอดสี
-            cat1BtnContainer.getChildren().addAll(catIcon, cooldownDim, barBackground, cooldownBar);
-        }
-
-        // 2.5 Logic คูลดาวน์
-        double cat1Cooldown = 2.5;
-
-        cat1BtnContainer.setOnMouseClicked(e -> {
-            // เช็คว่าหลอดกว้างเต็มหรือยัง (ถ้า width == imgW คือกดได้)
-            if (cooldownBar.getWidth() == imgW) {
-                spawnPlayerUnit(new Cat1()); // เสกแมว
-
-                // เริ่มคูลดาวน์: โชว์แผ่นฟิล์มและหลอดโหลด แล้วเซ็ตหลอดให้ว่างเปล่า
-                cooldownDim.setOpacity(1.0);
-                barBackground.setOpacity(1.0);
-                cooldownBar.setWidth(0);
-
-                Timeline timeline = new Timeline();
-                // 🌟 อนิเมตความกว้างของหลอดสี จาก 0 วิ่งไปจนเต็ม (imgW)
-                KeyValue kv = new KeyValue(cooldownBar.widthProperty(), imgW);
-                KeyFrame kf = new KeyFrame(Duration.seconds(cat1Cooldown), kv);
-
-                timeline.getKeyFrames().add(kf);
-                timeline.setOnFinished(event -> {
-                    // พอคูลดาวน์เสร็จ ซ่อนแผ่นฟิล์มและหลอดให้กลับมาเป็นปุ่มใสๆ เหมือนเดิม
-                    cooldownDim.setOpacity(0.0);
-                    barBackground.setOpacity(0.0);
-                });
-                timeline.play(); // เริ่มแอนิเมชัน
-            }
-        });
-
-        catsBox.getChildren().add(cat1BtnContainer);
+        catsBox.getChildren().addAll(cat1Btn, tofuBtn, knightBtn);
 
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-        // 3. ปุ่ม ปืนใหญ่ (CANNON) (ขวาสุด)
-        // ⚠️ อย่าลืมเตรียมรูป cannon_icon.png ไว้ใน resources ด้วยนะครับ
-        Button cannonBtn = createImageButton( "/button/cannonBTN_1.png", 150, 150, e -> {});
+        // 5.3 ปุ่ม ปืนใหญ่ (ขวาสุด)
+        Button cannonBtn = createImageButton("/button/cannonBTN_1.png", 150, 150, e -> {});
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
 
-        // นำทุกอย่างประกอบลงแถบด้านล่างตามลำดับ: LevelUP -> สปริง1 -> กลุ่มแมว -> สปริง2 -> ปืนใหญ่
+        // นำปุ่มทั้งหมดประกอบลงแถบด้านล่าง
         bottomTray.getChildren().addAll(levelUpBtn, spacer1, catsBox, spacer2, cannonBtn);
         gameUI.setBottom(bottomTray);
 
-        // --- สร้างป้อมทัพ ---
+        // --- 6. สร้างป้อมทัพ ---
         catTower = new CatTower();
         dogTower = new DogTower(selectedStage.getEnemyTowerHp());
 
@@ -205,6 +149,7 @@ public class Main extends Application {
         BattleManager.getInstance().addPlayerUnit(catTower);
         BattleManager.getInstance().addEnemyUnit(dogTower);
 
+        // 7. นำ Canvas และ UI มาซ้อนกันแล้วเริ่มเกม
         root.getChildren().addAll(canvas, gameUI);
         startGameThread(gc);
     }
@@ -263,25 +208,60 @@ public class Main extends Application {
                 double towerWidth = 80;
                 double towerHeight = 150;
                 double towerY = groundY - towerHeight;
+
+                // วาดตัวป้อม
                 if (u instanceof CatTower) gc.setFill(Color.DARKBLUE);
                 else gc.setFill(Color.DARKRED);
                 gc.fillRect(u.getX(), towerY, towerWidth, towerHeight);
+
+                // --- 🌟 วาดตัวเลขเลือดบนหัวป้อม ---
+
+                double currentHp = u.getHp();
+                double maxHp = ((Tower) u).getMaxHp();
+                String hpText = currentHp + " / " + maxHp;
+
+                // 2. ตั้งค่าฟอนต์ (ตัวหนา ขนาด 16)
+                gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 16));
+
+                // 3. ตั้งให้ข้อความอยู่ตรงกลาง (Center) เพื่อความสวยงาม
+                gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+
+                // คำนวณพิกัด X ให้อยู่กึ่งกลางป้อม และ Y ให้ลอยอยู่บนหัวป้อม 10 พิกเซล
+                double textX = u.getX() + (towerWidth / 2);
+                double textY = towerY - 10;
+
+                // 4. วาดขอบตัวเลขสีดำ (ให้อ่านง่ายขึ้นเวลาฉากหลังสีสว่าง)
+                gc.setStroke(Color.BLACK);
+                gc.setLineWidth(3);
+                gc.strokeText(hpText, textX, textY);
+
+                // 5. วาดตัวเลขสีขาวทับลงไปตรงกลาง
+                gc.setFill(Color.WHITE);
+                gc.fillText(hpText, textX, textY);
+
+                // ⚠️ สำคัญ: รีเซ็ตการจัดหน้ากลับเป็นด้านซ้าย (Left) เพื่อไม่ให้กระทบกับการวาดรูปอื่นๆ
+                gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
             }
             // ยูนิตทหาร (วาดเป็นแอนิเมชัน)
             else {
-                double unitSize = 80; // ปรับความใหญ่ของรูปตัวละครในเกมได้ตรงนี้
-                double unitY = groundY - unitSize;
+                // 🌟 แก้ไขตรงนี้: ให้ดึงขนาดมาจากตัวแปรของ Unit นั้นๆ
+                double unitWidth = 80;  // ค่าเริ่มต้นเผื่อ Unit ลืมใส่
+                double unitHeight = 80; // ค่าเริ่มต้นเผื่อ Unit ลืมใส่
+
+                unitWidth = u.getRenderWidth();
+                unitHeight = u.getRenderHeight();
+
+                double unitY = groundY - unitHeight; // ตำแหน่ง Y จะอิงตามความสูงของตัวละคร
 
                 Image sprite = u.getCurrentSprite();
 
                 if (sprite != null) {
-                    // วาดรูปตามสถานะปัจจุบัน
-                    gc.drawImage(sprite, u.getX(), unitY, unitSize, unitSize);
+                    // วาดรูปตามสถานะปัจจุบันและขนาดของตัวมันเอง
+                    gc.drawImage(sprite, u.getX(), unitY, unitWidth, unitHeight);
                 } else {
                     // ถ้าหาภาพไม่เจอจริงๆ ให้วาดสี่เหลี่ยมสำรอง
-                    if (u instanceof Cat1) gc.setFill(Color.SKYBLUE);
-                    else gc.setFill(Color.TOMATO);
-                    gc.fillRect(u.getX(), groundY - 50, 50, 50);
+                    gc.setFill(Color.TOMATO);
+                    gc.fillRect(u.getX(), unitY, unitWidth, unitHeight);
                 }
             }
         }

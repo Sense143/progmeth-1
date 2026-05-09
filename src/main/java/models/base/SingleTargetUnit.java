@@ -14,7 +14,7 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
     }
 
     @Override
-    public void takeDamage(int damage) {
+    public void takeDamage(double damage) {
         this.hp -= damage;
         this.hp = Math.max(this.hp, 0);
     }
@@ -80,5 +80,15 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
             setState(State.WALK);
             this.move();
         }
+    }
+
+    @Override
+    public double getRenderWidth() {
+        return 0;
+    }
+
+    @Override
+    public double getRenderHeight() {
+        return 0;
     }
 }

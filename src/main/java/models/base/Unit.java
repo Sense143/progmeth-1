@@ -100,4 +100,7 @@ public abstract class Unit implements Attackable {
         else gc.setFill(Color.BLUE);
         gc.fillRect(this.x, 350, 50, 50);
     }
+
+    public abstract double getRenderWidth();
+    public abstract double getRenderHeight();
 }

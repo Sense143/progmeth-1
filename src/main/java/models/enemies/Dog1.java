@@ -24,7 +24,17 @@ public class Dog1 extends SingleTargetUnit {
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/dog/dog_idle.png")));
 
         } catch (Exception e) {
-            System.out.println("โหลดรูป Cat1 ไม่สำเร็จ: " + e.getMessage());
+            System.out.println("โหลดรูป Dog1 ไม่สำเร็จ: " + e.getMessage());
         }
+    }
+
+    @Override
+    public double getRenderWidth() {
+        return 80;
+    }
+
+    @Override
+    public double getRenderHeight() {
+        return 80;
     }
 }
