@@ -65,6 +65,18 @@ public class Main extends Application {
 
     private ui.LevelUpButton levelUpButton;
 
+    // Tower destruction state
+    private boolean catTowerDestroyedHandled = false;
+    private boolean dogTowerDestroyedHandled = false;
+    private int gameOverCountdown = -1;
+    private String pendingGameOverText = null;
+    private ArrayList<models.base.TowerBurstEffect> burstEffects = new ArrayList<>();
+    private java.util.Random rng = new java.util.Random();
+    private boolean isGameOver = false;
+    private int postGameFrame = 0;
+    private double catTowerShakeX = 0;
+    private double dogTowerShakeX = 0;
+
     @Override
     public void start(Stage primaryStage) {
         root = new StackPane();
@@ -83,6 +95,15 @@ public class Main extends Application {
         BattleManager.getInstance().clearAll();
 
         logic.MoneyManager.getInstance().reset();
+        catTowerDestroyedHandled = false;
+        dogTowerDestroyedHandled = false;
+        gameOverCountdown = -1;
+        pendingGameOverText = null;
+        burstEffects.clear();
+        isGameOver = false;
+        postGameFrame = 0;
+        catTowerShakeX = 0;
+        dogTowerShakeX = 0;
 
         isPaused = false;
         running = true;
@@ -253,7 +274,21 @@ public class Main extends Application {
     }
 
     private void updateLogic() {
-        if (selectedStage != null) {
+        if (isGameOver) {
+            for (Unit u : units) u.update();
+            postGameFrame++;
+            if (postGameFrame % 3 == 0) {
+                if (catTowerDestroyedHandled) catTowerShakeX = rng.nextDouble() * 12 - 6;
+                if (dogTowerDestroyedHandled) dogTowerShakeX = rng.nextDouble() * 12 - 6;
+            }
+            if (postGameFrame % 12 == 0) {
+                if (catTowerDestroyedHandled) for (int i = 0; i < 3; i++) spawnTowerBurst(catTower);
+                if (dogTowerDestroyedHandled) for (int i = 0; i < 3; i++) spawnTowerBurst(dogTower);
+            }
+            return;
+        }
+
+        if (selectedStage != null && !dogTowerDestroyedHandled) {
             selectedStage.updateStage(units);
         }
 
@@ -286,7 +321,8 @@ public class Main extends Application {
             Unit u = units.get(i);
             u.update();
 
-            if (u.isDead()) {
+            // Towers stay on board even when dead (show destruction effect)
+            if (u.isDead() && !(u instanceof models.base.Tower)) {
                 units.remove(i);
                 BattleManager.getInstance().removeUnit(u);
             }
@@ -297,8 +333,37 @@ public class Main extends Application {
             if (!activeWaves.get(i).isActive()) activeWaves.remove(i);
         }
 
-        if (catTower.isDead()) gameOver("YOU LOSE!");
-        else if (dogTower.isDead()) gameOver("YOU WIN!");
+        // First frame a tower dies: knock back all units on that side, start countdown
+        if (catTower.isDead() && !catTowerDestroyedHandled) {
+            catTowerDestroyedHandled = true;
+            for (Unit u : BattleManager.getInstance().getPlayerUnits()) {
+                if (!(u instanceof models.base.Tower) && u.getHp() > 0) u.setHp(0);
+            }
+            pendingGameOverText = "YOU LOSE!";
+            gameOverCountdown = 150;
+        }
+        if (dogTower.isDead() && !dogTowerDestroyedHandled) {
+            dogTowerDestroyedHandled = true;
+            for (Unit u : BattleManager.getInstance().getEnemyUnits()) {
+                if (!(u instanceof models.base.Tower) && u.getHp() > 0) u.setHp(0);
+            }
+            pendingGameOverText = "YOU WIN!";
+            gameOverCountdown = 150;
+        }
+
+        // During countdown: spawn burst explosions on dead tower every 12 frames
+        if (gameOverCountdown > 0) {
+            gameOverCountdown--;
+            if (gameOverCountdown % 3 == 0) {
+                if (catTowerDestroyedHandled) catTowerShakeX = rng.nextDouble() * 12 - 6;
+                if (dogTowerDestroyedHandled) dogTowerShakeX = rng.nextDouble() * 12 - 6;
+            }
+            if (gameOverCountdown % 12 == 0) {
+                if (catTowerDestroyedHandled) for (int i = 0; i < 3; i++) spawnTowerBurst(catTower);
+                if (dogTowerDestroyedHandled) for (int i = 0; i < 3; i++) spawnTowerBurst(dogTower);
+            }
+            if (gameOverCountdown == 0) gameOver(pendingGameOverText);
+        }
     }
 
     private void render(GraphicsContext gc) {
@@ -318,6 +383,8 @@ public class Main extends Application {
 
         for (Unit u : units) {
             double drawX = u.getX() - cameraX;
+            if (u == catTower && catTowerDestroyedHandled) drawX += catTowerShakeX;
+            if (u == dogTower && dogTowerDestroyedHandled) drawX += dogTowerShakeX;
 
             if (u instanceof Tower) {
                 double towerWidth = u.getRenderWidth() > 0 ? u.getRenderWidth() : 80;
@@ -379,15 +446,21 @@ public class Main extends Application {
         }
 
         logic.EffectManager.getInstance().drawAll(gc, cameraX);
+
+        burstEffects.removeIf(models.base.TowerBurstEffect::isFinished);
+        for (models.base.TowerBurstEffect burst : burstEffects) {
+            burst.draw(gc, cameraX);
+        }
     }
 
     // 🌟 เมธอดลองซื้อแมว เปลี่ยนเป็นคืนค่า boolean
     private boolean trySpawnUnit(Unit cat, int cost) {
+        if (catTowerDestroyedHandled || dogTowerDestroyedHandled) return false;
         if (logic.MoneyManager.getInstance().spend(cost)) {
             spawnPlayerUnit(cat);
-            return true; // สำเร็จ! ให้ปุ่มเริ่มคูลดาวน์ได้
+            return true;
         } else {
-            return false; // ไม่สำเร็จ ไม่ต้องคูลดาวน์
+            return false;
         }
     }
 
@@ -545,6 +618,15 @@ public class Main extends Application {
         root.getChildren().add(mapPane);
     }
 
+    private void spawnTowerBurst(models.base.Tower tower) {
+        double tW = tower.getRenderWidth() > 0 ? tower.getRenderWidth() : 80;
+        double tH = tower.getRenderHeight() > 0 ? tower.getRenderHeight() : 150;
+        double groundY = 410;
+        double wx = tower.getX() + rng.nextDouble() * tW - tW / 2;
+        double sy = groundY - rng.nextDouble() * tH;
+        burstEffects.add(new models.base.TowerBurstEffect(wx, sy));
+    }
+
     private StackPane makeLabelledButton(Image btnImg, String text, double w, double h) {
         javafx.scene.image.ImageView iv = new javafx.scene.image.ImageView(btnImg);
         iv.setFitWidth(w);
@@ -584,7 +666,7 @@ public class Main extends Application {
     }
 
     private void gameOver(String resultText) {
-        running = false;
+        isGameOver = true;
         Platform.runLater(() -> {
             StackPane overlay = new StackPane();
             overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7);");
@@ -595,9 +677,9 @@ public class Main extends Application {
             Label resultLabel = new Label(resultText);
             resultLabel.setStyle("-fx-font-size: 50px; -fx-text-fill: white; -fx-font-weight: bold;");
 
-            Button menuBtn = new Button("RETURN TO MENU");
-            menuBtn.setPrefSize(200, 50);
-            menuBtn.setOnAction(e -> showMainMenu());
+            Image menuBtnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
+            StackPane menuBtn = makeLabelledButton(menuBtnImg, "RETURN TO MENU", 260, 55);
+            menuBtn.setOnMouseClicked(e -> { running = false; showMainMenu(); });
 
             box.getChildren().addAll(resultLabel, menuBtn);
             overlay.getChildren().add(box);
