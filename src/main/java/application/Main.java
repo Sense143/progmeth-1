@@ -108,7 +108,15 @@ public class Main extends Application {
         topBar.setPadding(new Insets(15));
         topBar.setAlignment(Pos.CENTER_LEFT);
 
-        Button pauseButton = new Button("||");
+        javafx.scene.image.ImageView pauseIcon = new javafx.scene.image.ImageView(
+            new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button/PauseBTN.png")))
+        );
+        pauseIcon.setFitWidth(40);
+        pauseIcon.setFitHeight(40);
+        Button pauseButton = new Button();
+        pauseButton.setGraphic(pauseIcon);
+        pauseButton.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+        pauseButton.setCursor(Cursor.HAND);
         pauseButton.setOnAction(e -> showPauseOverlay());
 
         Label stageNameLabel = new Label(selectedStage.getStageName());
@@ -396,14 +404,16 @@ public class Main extends Application {
         VBox menuBox = new VBox(20);
         menuBox.setAlignment(Pos.CENTER);
 
-        Button unpauseBtn = new Button("CONTINUE");
-        unpauseBtn.setOnAction(e -> {
+        Image pauseBtnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
+
+        StackPane unpauseBtn = makeLabelledButton(pauseBtnImg, "CONTINUE", 220, 50);
+        unpauseBtn.setOnMouseClicked(e -> {
             root.getChildren().remove(overlay);
             isPaused = false;
         });
 
-        Button mainMenuBtn = new Button("MAIN MENU");
-        mainMenuBtn.setOnAction(e -> {
+        StackPane mainMenuBtn = makeLabelledButton(pauseBtnImg, "MAIN MENU", 220, 50);
+        mainMenuBtn.setOnMouseClicked(e -> {
             running = false;
             showMainMenu();
         });
@@ -416,66 +426,137 @@ public class Main extends Application {
     private void showMainMenu() {
         root.getChildren().clear();
         running = false;
-        VBox menuContent = new VBox(20);
-        menuContent.setAlignment(Pos.CENTER);
-        menuContent.setStyle("-fx-background-color: #ffffff;");
-        Label title = new Label("BATTLE CAT");
-        title.setStyle("-fx-font-size: 40px; -fx-font-weight: bold;");
-        Button startBtn = new Button("START GAME");
-        startBtn.setPrefSize(200, 50);
-        startBtn.setOnAction(e -> showLevelSelection());
-        menuContent.getChildren().addAll(title, startBtn);
-        root.getChildren().add(menuContent);
+
+        Pane menuPane = new Pane();
+        menuPane.setPrefSize(SCREEN_WIDTH, 600);
+
+        // Background
+        Image titleImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/titleScreen.png")));
+        javafx.scene.image.ImageView bg = new javafx.scene.image.ImageView(titleImg);
+        bg.setFitWidth(SCREEN_WIDTH);
+        bg.setFitHeight(600);
+        bg.setPreserveRatio(false);
+        menuPane.getChildren().add(bg);
+
+        // Button image with START label stacked on top
+        double btnW = 254, btnH = 60;
+        Image btnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
+        javafx.scene.image.ImageView btnView = new javafx.scene.image.ImageView(btnImg);
+        btnView.setFitWidth(btnW);
+        btnView.setFitHeight(btnH);
+
+        Label startLabel = new Label("START");
+        startLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: black;");
+
+        StackPane startBtn = new StackPane(btnView, startLabel);
+        startBtn.setPrefSize(btnW, btnH);
+        startBtn.setCursor(Cursor.HAND);
+        startBtn.setOnMouseClicked(e -> showLevelSelection());
+        startBtn.setOnMouseEntered(e -> startBtn.setOpacity(0.85));
+        startBtn.setOnMouseExited(e -> startBtn.setOpacity(1.0));
+
+        // Center horizontally, center at 3/4 down (1/4 above bottom)
+        double btnX = (SCREEN_WIDTH - btnW) / 2;
+        double btnY = 600 * 0.75 - btnH / 2;
+        startBtn.setLayoutX(btnX);
+        startBtn.setLayoutY(btnY);
+
+        menuPane.getChildren().add(startBtn);
+        root.getChildren().add(menuPane);
     }
 
     private void showLevelSelection() {
         root.getChildren().clear();
-        VBox selectionBox = new VBox(30);
-        selectionBox.setAlignment(Pos.CENTER);
-        selectionBox.setStyle("-fx-background-color: #f0f0f0;");
-        Label header = new Label("SELECT STAGE");
-        header.setStyle("-fx-font-size: 30px; -fx-font-weight: bold;");
-        FlowPane stageButtons = new FlowPane(20, 20);
-        stageButtons.setAlignment(Pos.CENTER);
 
-        Button koreaBtn = new Button("KOREA");
-        koreaBtn.setPrefSize(150, 100);
-        koreaBtn.setStyle("-fx-font-size: 18px;");
-        koreaBtn.setOnAction(e -> { this.selectedStage = new Korea(); showGameScene(); });
-        stageButtons.getChildren().add(koreaBtn);
+        Pane mapPane = new Pane();
+        mapPane.setPrefSize(SCREEN_WIDTH, 600);
 
-        Button japanBtn = new Button("JAPAN");
-        japanBtn.setPrefSize(150, 100);
-        japanBtn.setStyle("-fx-font-size: 18px;");
-        japanBtn.setOnAction(e -> { this.selectedStage = new Japan(); showGameScene(); });
-        stageButtons.getChildren().add(japanBtn);
+        // Background worldmap
+        Image worldmapImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/worldmap.png")));
+        javafx.scene.image.ImageView mapView = new javafx.scene.image.ImageView(worldmapImg);
+        mapView.setFitWidth(SCREEN_WIDTH);
+        mapView.setFitHeight(600);
+        mapView.setPreserveRatio(false);
+        mapPane.getChildren().add(mapView);
 
-        Button chinaBtn = new Button("CHINA");
-        chinaBtn.setPrefSize(150, 100);
-        chinaBtn.setStyle("-fx-font-size: 18px;");
-        chinaBtn.setOnAction(e -> { this.selectedStage = new China(); showGameScene(); });
-        stageButtons.getChildren().add(chinaBtn);
+        // Country positions on the 1000x600 scaled map (pixel-sampled from 1752x990 original)
+        double[][] positions = {
+            {655, 180},  // China  (yellow)
+            {834, 163},  // Korea  (reddish-brown)
+            {915, 153},  // Japan  (red)
+            {663, 328},  // Vietnam (pale brown)
+            {621, 342},  // Thailand (pink)
+        };
+        String[] names = {"CHINA", "KOREA", "JAPAN", "VIETNAM", "THAILAND"};
+        Runnable[] actions = {
+            () -> { this.selectedStage = new China();   showGameScene(); },
+            () -> { this.selectedStage = new Korea();   showGameScene(); },
+            () -> { this.selectedStage = new Japan();   showGameScene(); },
+            () -> { this.selectedStage = new Vietnam(); showGameScene(); },
+            () -> { this.selectedStage = new Thailand(); showGameScene(); },
+        };
 
-        Button vietBtn = new Button("VIETNAM");
-        vietBtn.setPrefSize(150, 100);
-        vietBtn.setStyle("-fx-font-size: 18px;");
-        vietBtn.setOnAction(e -> { this.selectedStage = new Vietnam(); showGameScene(); });
-        stageButtons.getChildren().add(vietBtn);
+        Image xImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/x.png")));
+        for (int i = 0; i < names.length; i++) {
+            final int idx = i;
+            double cx = positions[i][0];
+            double cy = positions[i][1];
 
-        Button thaiBtn = new Button("THAILAND");
-        thaiBtn.setPrefSize(150, 100);
-        thaiBtn.setStyle("-fx-font-size: 18px;");
-        thaiBtn.setOnAction(e -> { this.selectedStage = new Thailand(); showGameScene(); });
-        stageButtons.getChildren().add(thaiBtn);
+            javafx.scene.image.ImageView xView = new javafx.scene.image.ImageView(xImg);
+            xView.setFitWidth(40);
+            xView.setFitHeight(40);
 
-        Button backBtn = new Button("BACK");
-        backBtn.setPrefSize(100, 40);
-        backBtn.setStyle("-fx-font-size: 14px;");
-        backBtn.setOnAction(e -> showMainMenu());
+            Label nameLabel = new Label(names[i]);
+            nameLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: white; -fx-effect: dropshadow(gaussian, black, 3, 1.0, 0, 0);");
 
-        selectionBox.getChildren().addAll(header, stageButtons, backBtn);
-        root.getChildren().add(selectionBox);
-        Platform.runLater(selectionBox::requestFocus);
+            VBox pinBox = new VBox(2, xView, nameLabel);
+            pinBox.setAlignment(Pos.CENTER);
+            pinBox.setCursor(Cursor.HAND);
+            pinBox.setOnMouseClicked(e -> actions[idx].run());
+            pinBox.setOnMouseEntered(e -> xView.setOpacity(0.75));
+            pinBox.setOnMouseExited(e -> xView.setOpacity(1.0));
+
+            // Centre the box on (cx, cy)
+            pinBox.setLayoutX(cx - 20);
+            pinBox.setLayoutY(cy - 20);
+
+            mapPane.getChildren().add(pinBox);
+        }
+
+        double backW = 150, backH = 36;
+        Image backBtnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
+        javafx.scene.image.ImageView backBtnView = new javafx.scene.image.ImageView(backBtnImg);
+        backBtnView.setFitWidth(backW);
+        backBtnView.setFitHeight(backH);
+
+        Label backLabel = new Label("BACK");
+        backLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: black;");
+
+        StackPane backBtn = new StackPane(backBtnView, backLabel);
+        backBtn.setPrefSize(backW, backH);
+        backBtn.setCursor(Cursor.HAND);
+        backBtn.setLayoutX(10);
+        backBtn.setLayoutY(10);
+        backBtn.setOnMouseClicked(e -> showMainMenu());
+        backBtn.setOnMouseEntered(e -> backBtn.setOpacity(0.85));
+        backBtn.setOnMouseExited(e -> backBtn.setOpacity(1.0));
+        mapPane.getChildren().add(backBtn);
+
+        root.getChildren().add(mapPane);
+    }
+
+    private StackPane makeLabelledButton(Image btnImg, String text, double w, double h) {
+        javafx.scene.image.ImageView iv = new javafx.scene.image.ImageView(btnImg);
+        iv.setFitWidth(w);
+        iv.setFitHeight(h);
+        Label lbl = new Label(text);
+        lbl.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: black;");
+        StackPane btn = new StackPane(iv, lbl);
+        btn.setPrefSize(w, h);
+        btn.setCursor(Cursor.HAND);
+        btn.setOnMouseEntered(e -> btn.setOpacity(0.85));
+        btn.setOnMouseExited(e -> btn.setOpacity(1.0));
+        return btn;
     }
 
     private Button createImageButton(String imagePath, int w, int h, javafx.event.EventHandler<javafx.event.ActionEvent> action) {
