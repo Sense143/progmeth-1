@@ -25,13 +25,11 @@ import javafx.util.Duration;
 import models.base.Tower;
 import models.base.Unit;
 import models.enemies.DogTower;
-import models.stages.Japan;
+import models.stages.*;
 import models.units.*;
 import logic.BattleManager;
 
 // --- Import คลาสระบบด่านเข้ามาเพิ่ม ---
-import models.stages.GameStage;
-import models.stages.Korea;
 import ui.CatButton;
 
 import java.util.ArrayList;
@@ -342,6 +340,24 @@ public class Main extends Application {
         japanBtn.setStyle("-fx-font-size: 18px;");
         japanBtn.setOnAction(e -> { this.selectedStage = new Japan(); showGameScene(); });
         stageButtons.getChildren().add(japanBtn);
+
+        Button chinaBtn = new Button("CHINA");
+        chinaBtn.setPrefSize(150, 100);
+        chinaBtn.setStyle("-fx-font-size: 18px;");
+        chinaBtn.setOnAction(e -> { this.selectedStage = new China(); showGameScene(); });
+        stageButtons.getChildren().add(chinaBtn);
+
+        Button vietBtn = new Button("VIETNAM");
+        vietBtn.setPrefSize(150, 100);
+        vietBtn.setStyle("-fx-font-size: 18px;");
+        vietBtn.setOnAction(e -> { this.selectedStage = new Vietnam(); showGameScene(); });
+        stageButtons.getChildren().add(vietBtn);
+
+        Button thaiBtn = new Button("THAILAND");
+        thaiBtn.setPrefSize(150, 100);
+        thaiBtn.setStyle("-fx-font-size: 18px;");
+        thaiBtn.setOnAction(e -> { this.selectedStage = new Thailand(); showGameScene(); });
+        stageButtons.getChildren().add(thaiBtn);
 
         Button backBtn = new Button("BACK");
         backBtn.setPrefSize(100, 40);

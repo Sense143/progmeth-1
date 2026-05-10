@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Cat1 extends SingleTargetUnit{
 
     public Cat1() {
-        super("Basic Cat", 2300, 100, 10, 1500, 100, -3);
+        super("Basic Cat", 2300, 100, 10, 1500, 50, -3);
         try {
             // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/normCat/000_f_1.png")));

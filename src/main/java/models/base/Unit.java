@@ -113,4 +113,9 @@ public abstract class Unit implements Attackable {
 
     public abstract double getRenderWidth();
     public abstract double getRenderHeight();
+
+    public double getRimPosition(){
+        if(this.speed > 0) return this.x + (this.getRenderWidth())/2;
+        else return this.x - (this.getRenderWidth())/2;
+    }
 }

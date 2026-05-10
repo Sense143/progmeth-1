@@ -29,7 +29,7 @@ public class FishCat extends SingleTargetUnit {
     }
 
     public double getRenderWidth() {
-        return 120;
+        return 150;
     }
 
     public double getRenderHeight() {

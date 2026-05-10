@@ -1,6 +1,9 @@
 package logic;
 
 import models.base.Unit;
+import models.enemies.Stickman;
+import models.units.TofuCat;
+import models.units.UFOCat;
 
 import java.util.ArrayList;
 
@@ -18,7 +21,13 @@ public class BattleManager {
         ArrayList<Unit> potentialTargets = (isPlayerUnit(attacker)) ? enemyUnits : playerUnits;
         ArrayList<Unit> targets = new ArrayList<>();
         for (Unit target : potentialTargets) {
-            double distance = Math.abs(attacker.getX() - target.getX());
+            double distance = Math.abs(attacker.getX() - target.getRimPosition());
+            if(target instanceof TofuCat){
+                distance = Math.abs(attacker.getX() - target.getX());
+            }
+            if(target instanceof Stickman && attacker instanceof UFOCat){
+                distance = Math.abs(attacker.getX() - target.getX());
+            }
             if (distance <= attacker.getAttackRange() && distance >= attacker.getAttackRangeMin()) {
                 targets.add(target);
             }
@@ -29,7 +38,10 @@ public class BattleManager {
     public Unit findSingleTargetInRange(Unit attacker) {
         ArrayList<Unit> Targets = (isPlayerUnit(attacker)) ? enemyUnits : playerUnits;
         for (Unit target : Targets) {
-            double distance = Math.abs(attacker.getX() - target.getX());
+            double distance = Math.abs(attacker.getX() - target.getRimPosition());
+            if(target instanceof TofuCat){
+                distance = Math.abs(attacker.getX() - target.getX());
+            }
             if (distance <= attacker.getAttackRange()) {
                 return target;
             }
