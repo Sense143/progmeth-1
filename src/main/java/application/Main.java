@@ -19,12 +19,14 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import models.base.CannonWave;
 import models.base.Tower;
 import models.base.Unit;
 import models.enemies.DogTower;
 import models.stages.*;
 import models.units.*;
 import logic.BattleManager;
+import ui.CannonButton;
 import ui.CatButton; // 🌟 Import ปุ่มแมว
 
 import java.util.ArrayList;
@@ -50,6 +52,11 @@ public class Main extends Application {
     private Thread gameThread;
 
     private GameStage selectedStage;
+
+    private ArrayList<models.base.CannonWave> activeWaves = new ArrayList<>();
+    private boolean isTowerFiring = false;
+    private Image towerNormal = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase.png")));
+    private Image towerFire = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase_firing.png")));
 
     private final double WORLD_WIDTH = 2500;
     private final double SCREEN_WIDTH = 1000;
@@ -165,7 +172,40 @@ public class Main extends Application {
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-        Button cannonBtn = createImageButton("/button/cannonBTN_1.png", 150, 150, e -> {});
+//        CannonButton cannonBtn = new CannonButton("/button/cannonBTN_1.png", 30.0, () -> {
+//            // 1. สร้างลำแสง
+//            activeWaves.add(new models.base.CannonWave(catTower.getX()));
+//
+//            // 2. สลับรูปฐานเป็นตอนยิง
+//            isTowerFiring = true;
+//            catTower.setCurrentSprite(towerFire); // ต้องมีเมธอด setCurrentSprite ในคลาส Tower
+//
+//            // 3. หลังจาก 1 วินาที ให้ฐานกลับเป็นรูปปกติ
+//            new Thread(() -> {
+//                try { Thread.sleep(1000); } catch (Exception e) {}
+//                isTowerFiring = false;
+//                catTower.setCurrentSprite(towerNormal);
+//            }).start();
+//        });
+        CannonButton cannonBtn = new CannonButton("/button/cannonBTN_1.png", 30.0, () -> {
+            // 1. ยิงคลื่น
+            activeWaves.add(new CannonWave(catTower.getX()));
+
+            // 2. สลับรูปฐานเป็นตอนยิง (Optional: ถ้าต้องการความสวยงาม)
+            isTowerFiring = true;
+            catTower.setCurrentSprite(towerFire);
+
+            // ใช้ Timeline สั้นๆ ใน Main เพื่อเปลี่ยนรูปฐานกลับ
+            javafx.animation.PauseTransition towerReset = new javafx.animation.PauseTransition(Duration.seconds(1));
+            towerReset.setOnFinished(ev -> {
+                isTowerFiring = false;
+                catTower.setCurrentSprite(towerNormal);
+            });
+            towerReset.play();
+
+            // ❌ ไม่ต้องสั่ง cannonBtn.setVisible(false) ที่นี่แล้ว
+            // เพราะข้างใน CannonButton.java มันสั่งตัวเองไปแล้วครับ
+        });
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
 
@@ -244,6 +284,11 @@ public class Main extends Application {
             }
         }
 
+        for (int i = activeWaves.size() - 1; i >= 0; i--) {
+            activeWaves.get(i).update();
+            if (!activeWaves.get(i).isActive()) activeWaves.remove(i);
+        }
+
         if (catTower.isDead()) gameOver("YOU LOSE!");
         else if (dogTower.isDead()) gameOver("YOU WIN!");
     }
@@ -319,6 +364,10 @@ public class Main extends Application {
                     gc.fillRect(drawX, unitY, unitWidth, unitHeight);
                 }
             }
+        }
+
+        for (models.base.CannonWave wave : activeWaves) {
+            wave.draw(gc, cameraX);
         }
 
         logic.EffectManager.getInstance().drawAll(gc, cameraX);

@@ -40,6 +40,11 @@ public abstract class Unit implements Attackable {
     protected double yOffset = 0;
     protected double soulTimer = 0;
 
+    protected Image customSprite = null;
+    public void setCurrentSprite(Image sprite) {
+        this.customSprite = sprite;
+    }
+
     public Unit(String name, double x, double hp, double attackDamage, double attackCooldown, double attackRange, double speed) {
         this.name = name;
         this.x = x;
@@ -170,11 +175,11 @@ public abstract class Unit implements Attackable {
     }
 
     public Image getCurrentSprite() {
+        // 🌟 ถ้ามีการสั่ง set รูปพิเศษมา (เช่น ตอนป้อมยิง) ให้ใช้รูปนั้นก่อน
+        if (customSprite != null) return customSprite;
+
         if (currentState == State.DEAD_KNOCKBACK && knockbackSprite != null) return knockbackSprite;
-
-        // 🌟 เปลี่ยนมาดึงจาก sharedSoulSprites แทน
         if (currentState == State.DEAD_SOUL && sharedSoulSprites[currentFrame] != null) return sharedSoulSprites[currentFrame];
-
         if (currentState == State.WALK && walkSprites[currentFrame] != null) return walkSprites[currentFrame];
         if (currentState == State.ATTACK && attackSprites[currentFrame] != null) return attackSprites[currentFrame];
         if (currentState == State.IDLE && idleSprite != null) return idleSprite;

@@ -37,6 +37,10 @@ public class BattleManager {
         return targets;
     }
 
+    public ArrayList<Unit> getEveryTargetOnBoard(){
+        return enemyUnits;
+    }
+
     public Unit findSingleTargetInRange(Unit attacker) {
         ArrayList<Unit> Targets = (isPlayerUnit(attacker)) ? enemyUnits : playerUnits;
         for (Unit target : Targets) {
