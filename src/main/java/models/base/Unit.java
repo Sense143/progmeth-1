@@ -18,6 +18,8 @@ public abstract class Unit implements Attackable {
     protected long lastAttackTime = 0;
     protected long timeOfDeath = 0;
     protected double attackRangeMin = 0;
+    protected boolean hasDealtDamageThisAttack = false;
+    protected Unit currentTarget;
 
     // 🌟 สร้างสถานะของตัวละคร (เดิน, โจมตี, รอคูลดาวน์)
     public enum State { WALK, ATTACK, IDLE }
@@ -67,18 +69,34 @@ public abstract class Unit implements Attackable {
 
     public abstract void update();
 
-    // 🌟 อัปเดตเฟรมภาพ (สลับรูป)
     protected void updateAnimation() {
         animTick++;
         if (animTick >= animSpeed) {
             animTick = 0;
             currentFrame++;
 
-            // ถ้าเป็นสถานะเดิน หรือ โจมตี ให้วนลูป 3 รูป (index 0, 1, 2)
-            if (currentState == State.WALK || currentState == State.ATTACK) {
-                if (currentFrame >= 3) {
+            if (currentState == State.WALK) {
+                // ถ้าเดินอยู่ ให้วนลูปภาพ 0, 1, 2
+                if (currentFrame > 2) {
                     currentFrame = 0;
                 }
+            }
+            else if (currentState == State.ATTACK) {
+                // ถ้าโจมตีอยู่ และถึงเฟรมที่ 2 (รูปที่ 3 จังหวะฟันพอดี)
+                if (currentFrame == 2 && currentTarget != null) {
+                    processAttackDamage(currentTarget);
+                }
+
+                // พอเล่นแอนิเมชันโจมตีเสร็จ (currentFrame ทะลุ 2)
+                if (currentFrame > 2) {
+                    currentFrame = 0;
+                    hasDealtDamageThisAttack = false; // ปลดล็อคดาเมจสำหรับรอบหน้า
+                    setState(State.IDLE); // ตีเสร็จให้กลับไปยืนรอคูลดาวน์ก่อน
+                }
+            }
+            else if (currentState == State.IDLE) {
+                // ยืนเฉยๆ ไม่ต้องขยับเฟรม
+                currentFrame = 0;
             }
         }
     }
@@ -104,12 +122,6 @@ public abstract class Unit implements Attackable {
         }
     }
 
-    // (เมธอด render สี่เหลี่ยมแบบเดิม เก็บไว้เผื่อฉุกเฉิน)
-    public void render(GraphicsContext gc) {
-        if (this.isAoe) gc.setFill(Color.ORANGE);
-        else gc.setFill(Color.BLUE);
-        gc.fillRect(this.x, 350, 50, 50);
-    }
 
     public abstract double getRenderWidth();
     public abstract double getRenderHeight();
@@ -117,5 +129,14 @@ public abstract class Unit implements Attackable {
     public double getRimPosition(){
         if(this.speed > 0) return this.x + (this.getRenderWidth())/2;
         else return this.x - (this.getRenderWidth())/2;
+    }
+
+    protected void processAttackDamage(Unit target) {
+        // currentFrame == 2 คือรูปที่ 3 ของ Array ครับ
+        if (this.currentFrame == 2 && !hasDealtDamageThisAttack) {
+            target.takeDamage(this.attackDamage);
+            hasDealtDamageThisAttack = true;
+            System.out.println(this.name + " ฟันโดนที่เฟรมภาพที่ 3!");
+        }
     }
 }

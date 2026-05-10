@@ -35,15 +35,7 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public boolean isDead() {
-        if (this.hp <= 0) {
-            // ถ้าพึ่งเลือดหมดครั้งแรก ให้บันทึกเวลาปัจจุบันไว้
-            if (timeOfDeath == 0) {
-                timeOfDeath = System.currentTimeMillis();
-            }
-            // คืนค่า true (เพื่อให้ Main ลบตัวละครทิ้ง) ก็ต่อเมื่อเวลาผ่านไป 100ms (0.1 วิ) แล้วเท่านั้น
-            return System.currentTimeMillis() - timeOfDeath >= 500;
-        }
-        return false;
+        return this.hp <= 0;
     }
 
     @Override

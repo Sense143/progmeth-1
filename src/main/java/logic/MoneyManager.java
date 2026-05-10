@@ -28,9 +28,9 @@ public class MoneyManager {
 
     // อัปเดตสเตตัสกระเป๋าตังค์ตามเลเวลปัจจุบัน
     private void updateStats() {
-        this.maxMoney = 100 + (moneyLevel * 50); // Lv.1 = 150, Lv.2 = 200...
-        this.upgradeCost = moneyLevel * 100;     // Lv.1 อัป Lv.2 ใช้ 100
-        this.generationRate = 0.05 + (moneyLevel * 0.02); // ความเร็วเงินเด้ง (คำนวณทุกเฟรม)
+        this.maxMoney = 100 + (moneyLevel * 100);
+        this.upgradeCost = (int) (0.6 * this.maxMoney);
+        this.generationRate = 0.3 + (moneyLevel * 0.15); // ความเร็วเงินเด้ง (คำนวณทุกเฟรม)
     }
 
     // เรียกใช้ทุกๆ เฟรม (60 ครั้ง/วินาที)

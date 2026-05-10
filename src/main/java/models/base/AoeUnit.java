@@ -32,20 +32,12 @@ public class AoeUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public void Attack(Unit target) {
-        return; // AoeUnit ไม่โจมตีเป้าหมายเดี่ยว
+        return;
     }
 
     @Override
     public boolean isDead() {
-        if (this.hp <= 0) {
-            // ถ้าพึ่งเลือดหมดครั้งแรก ให้บันทึกเวลาปัจจุบันไว้
-            if (timeOfDeath == 0) {
-                timeOfDeath = System.currentTimeMillis();
-            }
-            // คืนค่า true (เพื่อให้ Main ลบตัวละครทิ้ง) ก็ต่อเมื่อเวลาผ่านไป 100ms (0.5 วิ) แล้วเท่านั้น
-            return System.currentTimeMillis() - timeOfDeath >= 500;
-        }
-        return false;
+        return this.hp <= 0;
     }
 
     @Override

@@ -20,4 +20,9 @@ public class Vietnam extends GameStage{
             BattleManager.getInstance().addEnemyUnit(enemy);
         }
     }
+
+    @Override
+    public String getEnemyTowerImagePath() {
+        return "/tower/towertexture/ec014.png";
+    }
 }

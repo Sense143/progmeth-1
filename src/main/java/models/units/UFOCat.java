@@ -4,6 +4,7 @@ import javafx.scene.image.Image;
 import logic.BattleManager;
 import models.base.AoeUnit;
 import models.base.Unit;
+import models.enemies.Stickman;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -102,7 +103,10 @@ public class UFOCat extends AoeUnit {
         if (allTargets != null) {
             for (Unit t : allTargets) {
                 // คำนวณระยะห่าง
-                double distance = Math.abs(this.getX() - t.getX());
+                double distance = Math.abs(this.getX() - t.getRimPosition());
+                if(t instanceof Stickman){
+                    distance = Math.abs(this.getX() - t.getX());
+                }
 
                 // ถ้าศัตรูอยู่ในวงของคลื่นลูกนี้ และ "ยังไม่เคยโดนระเบิดลูกก่อนหน้า"
                 if (distance <= currentMaxRange && distance >= currentWaveStep * WAVE_WIDTH) {

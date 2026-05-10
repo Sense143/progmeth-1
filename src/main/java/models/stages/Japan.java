@@ -55,4 +55,9 @@ public class Japan extends GameStage{
             BattleManager.getInstance().addEnemyUnit(enemy);
         }
     }
+
+    @Override
+    public String getEnemyTowerImagePath() {
+        return "/tower/towertexture/ec038.png";
+    }
 }

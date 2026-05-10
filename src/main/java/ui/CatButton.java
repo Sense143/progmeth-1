@@ -12,14 +12,18 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 
-// คลาสนี้สืบทอดจาก StackPane เพื่อให้มันทำหน้าที่เป็น UI Component ตัวนึงได้เลย
 public class CatButton extends StackPane {
 
-    private boolean isCooldown = false; // ตัวแปรเช็คว่ากำลังคูลดาวน์อยู่ไหม
+    private boolean isCooldown = false;
+    private int cost;
 
-    // Constructor รับค่า: พาทรูปภาพ, เวลาคูลดาวน์, และ คำสั่งที่จะให้ทำตอนกดเสกแมว
-    public CatButton(String imagePath, double cooldownTime, Runnable onSpawnAction) {
+    // 🌟 เพิ่มแผ่นฟิล์มดำสำหรับเช็คเงิน (มืดเท่าแผ่นคูลดาวน์)
+    private Rectangle moneyDim;
+
+    public CatButton(String imagePath, double cooldownTime, int cost, BooleanSupplier onSpawnAction) {
+        this.cost = cost;
 
         double imgW = 100;
         double imgH = 80;
@@ -40,36 +44,62 @@ public class CatButton extends StackPane {
             System.err.println("หาภาพไม่เจอ: " + imagePath);
         }
 
-        // 2. แผ่นฟิล์มคูลดาวน์
+        // 🌟 2. แผ่นฟิล์มตอนเงินไม่พอ (มืด 0.65 เท่ากับแผ่นคูลดาวน์)
+        moneyDim = new Rectangle(imgW, imgH);
+        moneyDim.setFill(Color.BLACK);
+        moneyDim.setOpacity(0.65);
+        moneyDim.setVisible(true); // เริ่มเกมมาเงินยังเป็น 0 ให้ปิดฟิล์มนี้ไว้เลย
+
+        // 3. แผ่นฟิล์มคูลดาวน์
         Rectangle cooldownDim = new Rectangle(imgW, 0);
         cooldownDim.setFill(Color.BLACK);
         cooldownDim.setOpacity(0.65);
         StackPane.setAlignment(cooldownDim, Pos.TOP_CENTER);
 
-        // 3. Clipping
+        // 4. Clipping
         Rectangle clip = new Rectangle(imgW, imgH);
         this.setClip(clip);
 
-        this.getChildren().addAll(catIcon, cooldownDim);
+        // 🌟 นำฟิล์มเงินไปซ้อนก่อนฟิล์มคูลดาวน์
+        this.getChildren().addAll(catIcon, moneyDim, cooldownDim);
 
-        // 4. การคลิกปุ่ม
+        // 5. การคลิกปุ่ม
         this.setOnMouseClicked(e -> {
             if (!isCooldown) {
-                // รันคำสั่งเสกแมวที่ส่งเข้ามา
-                onSpawnAction.run();
+                // ลองรันคำสั่งเสกแมว
+                boolean success = onSpawnAction.getAsBoolean();
 
-                // เริ่มคูลดาวน์
-                isCooldown = true;
-                cooldownDim.setHeight(imgH);
+                if (success) {
+                    isCooldown = true;
 
-                Timeline timeline = new Timeline();
-                KeyValue kv = new KeyValue(cooldownDim.heightProperty(), 0);
-                KeyFrame kf = new KeyFrame(Duration.seconds(cooldownTime), kv);
+                    // 🌟 พอซื้อสำเร็จให้ซ่อนแผ่นเงินไปก่อน แล้วให้แผ่นคูลดาวน์กางออกแทน
+                    moneyDim.setVisible(false);
+                    cooldownDim.setHeight(imgH);
 
-                timeline.getKeyFrames().add(kf);
-                timeline.setOnFinished(event -> isCooldown = false); // เมื่อเสร็จ ให้กดได้ใหม่
-                timeline.play();
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(cooldownDim.heightProperty(), 0);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(cooldownTime), kv);
+
+                    timeline.getKeyFrames().add(kf);
+                    timeline.setOnFinished(event -> isCooldown = false); // เมื่อเสร็จ ให้กดได้ใหม่
+                    timeline.play();
+                }
             }
         });
+    }
+
+    // 🌟 เมธอดอัปเดตสถานะปุ่ม
+    public void updateState(int currentMoney) {
+        if (isCooldown) {
+            // ถ้ากำลังคูลดาวน์อยู่ ซ่อนแผ่นเงินไปเลย จะได้ไม่มืดซ้อนกัน 2 ชั้น
+            moneyDim.setVisible(false);
+        } else {
+            // ถ้าไม่ได้คูลดาวน์ ให้โชว์/ซ่อน แผ่นเงินตามจำนวนเงินที่มี
+            if (currentMoney < cost) {
+                moneyDim.setVisible(true);  // เงินไม่พอ กางแผ่นดำ
+            } else {
+                moneyDim.setVisible(false); // เงินพอแล้ว ซ่อนแผ่นดำ
+            }
+        }
     }
 }

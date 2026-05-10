@@ -29,9 +29,4 @@ public class EffectManager {
             sfx.draw(gc, cameraX);
         }
     }
-
-    // อย่าลืม clear ตอนเริ่มด่านใหม่ด้วยนะครับ
-    public void clearAll() {
-        activeEffects.clear();
-    }
 }

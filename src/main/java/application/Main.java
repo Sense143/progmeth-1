@@ -16,9 +16,6 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Arc;
-import javafx.scene.shape.ArcType;
-import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -28,9 +25,7 @@ import models.enemies.DogTower;
 import models.stages.*;
 import models.units.*;
 import logic.BattleManager;
-
-// --- Import คลาสระบบด่านเข้ามาเพิ่ม ---
-import ui.CatButton;
+import ui.CatButton; // 🌟 Import ปุ่มแมว
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -39,6 +34,11 @@ public class Main extends Application {
 
     private StackPane root;
     private BorderPane gameUI;
+
+    private Label moneyLabel;
+
+    // 🌟 ตัวแปรเก็บปุ่มแมวทั้งหมด เพื่อเอาไว้อัปเดตสถานะตอนเงินเด้ง
+    private ArrayList<CatButton> catButtons = new ArrayList<>();
 
     private ArrayList<Unit> units = new ArrayList<>();
     private Tower catTower;
@@ -50,9 +50,8 @@ public class Main extends Application {
 
     private GameStage selectedStage;
 
-    // 🌟 ตัวแปรระบบกล้อง (Camera)
-    private final double WORLD_WIDTH = 2500;  // ความยาวของด่านทั้งหมด (ปรับให้ยาวขึ้นหรือสั้นลงได้)
-    private final double SCREEN_WIDTH = 1000; // ความกว้างของหน้าจอ
+    private final double WORLD_WIDTH = 2500;
+    private final double SCREEN_WIDTH = 1000;
     private double cameraX = 0;
     private double dragLastX = 0;
 
@@ -68,38 +67,33 @@ public class Main extends Application {
     }
 
     private void showGameScene() {
-        // 1. เคลียร์ข้อมูลเก่าและตั้งค่าเริ่มต้น
         root.getChildren().clear();
         units.clear();
+        catButtons.clear(); // 🌟 เคลียร์ปุ่มเก่าตอนเริ่มด่าน
         BattleManager.getInstance().clearAll();
+
+        logic.MoneyManager.getInstance().reset();
+
         isPaused = false;
         running = true;
-
-        // 🌟 ตั้งค่ากล้องเริ่มต้นให้อยู่ฝั่งฐานเรา (ฝั่งขวาสุด)
         cameraX = WORLD_WIDTH - SCREEN_WIDTH;
 
-        // 2. สร้างพื้นที่วาดกราฟิก (Canvas)
         Canvas canvas = new Canvas(SCREEN_WIDTH, 600);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        // 🌟 เพิ่มระบบเลื่อนกล้องด้วยการคลิกลากเมาส์
         canvas.setOnMousePressed(e -> dragLastX = e.getSceneX());
         canvas.setOnMouseDragged(e -> {
             double deltaX = dragLastX - e.getSceneX();
             cameraX += deltaX;
-
-            // ล็อกกล้องไม่ให้เลื่อนทะลุขอบด่าน
             if (cameraX < 0) cameraX = 0;
             if (cameraX > WORLD_WIDTH - SCREEN_WIDTH) cameraX = WORLD_WIDTH - SCREEN_WIDTH;
-
             dragLastX = e.getSceneX();
         });
 
-        // 3. สร้างเลเยอร์สำหรับวาง UI (ปุ่ม, ข้อความ)
         gameUI = new BorderPane();
         gameUI.setPickOnBounds(false);
 
-        // --- 4. แถบด้านบน (Top Bar) ---
+        // --- แถบด้านบน ---
         HBox topBar = new HBox(10);
         topBar.setPadding(new Insets(15));
         topBar.setAlignment(Pos.CENTER_LEFT);
@@ -111,22 +105,25 @@ public class Main extends Application {
         stageNameLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: black;");
 
         Region topSpacer = new Region();
-        HBox.setHgrow(topSpacer, Priority.ALWAYS); // ดันให้เงินไปอยู่ขวาสุด
+        HBox.setHgrow(topSpacer, Priority.ALWAYS);
 
-        Label moneyLabel = new Label("40/150");
-        moneyLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
+        moneyLabel = new Label("0/150");
+        moneyLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: black; -fx-font-size: 18px;");
 
         topBar.getChildren().addAll(pauseButton, stageNameLabel, topSpacer, moneyLabel);
         gameUI.setTop(topBar);
 
-        // --- 5. แถบด้านล่าง (Bottom Tray) ---
+        // --- แถบด้านล่าง ---
         HBox bottomTray = new HBox(10);
         bottomTray.setPadding(new Insets(30, 30, 10, 30));
         bottomTray.setAlignment(Pos.BOTTOM_LEFT);
 
-        // 5.1 ปุ่ม Level UP (ซ้ายสุด)
+        // ปุ่ม Level UP
         Button levelUpBtn = createImageButton("/button/moneyBTN_1.png", 150, 150, e -> {
-            System.out.println("Level UP!");
+            logic.MoneyManager mm = logic.MoneyManager.getInstance();
+            if (!mm.isMaxLevel() && mm.upgradeWallet()) {
+                System.out.println("อัปเกรดกระเป๋าเป็น Lv." + mm.getMoneyLevel());
+            }
         });
         levelUpBtn.setTranslateX(-40);
         levelUpBtn.setTranslateY(23);
@@ -134,22 +131,29 @@ public class Main extends Application {
         Region spacer1 = new Region();
         HBox.setHgrow(spacer1, Priority.ALWAYS);
 
-        // 5.2 กลุ่มปุ่มแมว (ตรงกลาง)
+        // กลุ่มปุ่มแมว
         HBox catsBox = new HBox(10);
         catsBox.setAlignment(Pos.BOTTOM_CENTER);
 
-        CatButton cat1Btn = new CatButton("/cat/icon/uni000_f00.png", 2.5, () -> spawnPlayerUnit(new Cat1()));
-        CatButton tofuBtn = new CatButton("/cat/icon/uni001_c00.png", 2.5, () -> spawnPlayerUnit(new TofuCat()));
-        CatButton knightBtn = new CatButton("/cat/icon/uni002_c00.png", 5, () -> spawnPlayerUnit(new KnightCat()));
-        CatButton fishBtn = new CatButton("/cat/icon/uni006_f00.png", 12, () -> spawnPlayerUnit(new FishCat()));
-        CatButton ufoBtn = new CatButton("/cat/icon/uni005_c00.png", 15, () -> spawnPlayerUnit(new UFOCat()));
+        // 🌟 สร้างปุ่มแมวโดยส่ง พารามิเตอร์: ภาพ, เวลาคูลดาวน์(วินาที), ราคา, เมธอดทำงาน
+        CatButton cat1Btn = new CatButton("/cat/icon/uni000_f00.png", 2.5, 50, () -> trySpawnUnit(new Cat1(), 50));
+        CatButton tofuBtn = new CatButton("/cat/icon/uni001_c00.png", 3.0, 100, () -> trySpawnUnit(new TofuCat(), 100));
+        CatButton knightBtn = new CatButton("/cat/icon/uni002_c00.png", 5.0, 150, () -> trySpawnUnit(new KnightCat(), 150));
+        CatButton fishBtn = new CatButton("/cat/icon/uni006_f00.png", 10.0, 400, () -> trySpawnUnit(new FishCat(), 400));
+        CatButton ufoBtn = new CatButton("/cat/icon/uni005_c00.png", 15.0, 600, () -> trySpawnUnit(new UFOCat(), 600));
+
+        // 🌟 เก็บลงลิสต์เพื่อให้ Game Loop เอาไปอัปเดตสี
+        catButtons.add(cat1Btn);
+        catButtons.add(tofuBtn);
+        catButtons.add(knightBtn);
+        catButtons.add(fishBtn);
+        catButtons.add(ufoBtn);
 
         catsBox.getChildren().addAll(cat1Btn, tofuBtn, knightBtn, fishBtn, ufoBtn);
 
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-        // 5.3 ปุ่ม ปืนใหญ่ (ขวาสุด)
         Button cannonBtn = createImageButton("/button/cannonBTN_1.png", 150, 150, e -> {});
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
@@ -157,16 +161,15 @@ public class Main extends Application {
         bottomTray.getChildren().addAll(levelUpBtn, spacer1, catsBox, spacer2, cannonBtn);
         gameUI.setBottom(bottomTray);
 
-        // --- 6. สร้างป้อมทัพ ---
+        // --- สร้างป้อมทัพ ---
         catTower = new CatTower();
-        dogTower = new DogTower(selectedStage.getEnemyTowerHp());
+        dogTower = new DogTower(selectedStage.getEnemyTowerHp(), selectedStage.getEnemyTowerImagePath());
 
         units.add(catTower);
         units.add(dogTower);
         BattleManager.getInstance().addPlayerUnit(catTower);
         BattleManager.getInstance().addEnemyUnit(dogTower);
 
-        // 7. นำ Canvas และ UI มาซ้อนกันแล้วเริ่มเกม
         root.getChildren().addAll(canvas, gameUI);
         startGameThread(gc);
     }
@@ -195,6 +198,16 @@ public class Main extends Application {
             selectedStage.updateStage(units);
         }
 
+        // ระบบเงิน และ เอฟเฟกต์
+        logic.MoneyManager.getInstance().update();
+
+        // 🌟 อัปเดตสถานะปุ่มแมว (มืด/สว่าง) แบบ Real-time ตามเงินที่มี
+        int currentMoney = logic.MoneyManager.getInstance().getCurrentMoney();
+        Platform.runLater(() -> {
+            for (CatButton btn : catButtons) {
+                btn.updateState(currentMoney);
+            }
+        });
 
         for (int i = units.size() - 1; i >= 0; i--) {
             Unit u = units.get(i);
@@ -211,7 +224,11 @@ public class Main extends Application {
     }
 
     private void render(GraphicsContext gc) {
-        // 🌟 วาดพื้นหลัง โดยหักลบตำแหน่งกล้อง (-cameraX) และวาดให้กว้างเท่า WORLD_WIDTH
+        // อัปเดตตัวเลขกระเป๋าเงิน
+        logic.MoneyManager mm = logic.MoneyManager.getInstance();
+        String levelStatus = mm.isMaxLevel() ? " (MAX)" : " (Lv." + mm.getMoneyLevel() + ")";
+        moneyLabel.setText("Money: " + mm.getCurrentMoney() + " / " + mm.getMaxMoney() + levelStatus);
+
         if (selectedStage != null && selectedStage.getBackgroundImage() != null) {
             gc.drawImage(selectedStage.getBackgroundImage(), -cameraX, 0, WORLD_WIDTH, 600);
         } else {
@@ -222,21 +239,23 @@ public class Main extends Application {
         double groundY = 410;
 
         for (Unit u : units) {
-            // 🌟 คำนวณตำแหน่ง X สำหรับวาดบนจอ โดยเอาพิกัดจริงลบด้วยพิกัดกล้อง
             double drawX = u.getX() - cameraX;
 
-            // --- ป้อม ---
             if (u instanceof Tower) {
                 double towerWidth = u.getRenderWidth() > 0 ? u.getRenderWidth() : 80;
                 double towerHeight = u.getRenderHeight() > 0 ? u.getRenderHeight() : 150;
                 double towerY = groundY - towerHeight;
 
-                // วาดตัวป้อม
-                if (u instanceof CatTower) gc.setFill(Color.DARKBLUE);
-                else gc.setFill(Color.DARKRED);
-                gc.fillRect(drawX, towerY, towerWidth, towerHeight);
+                Image sprite = u.getCurrentSprite();
 
-                // 🌟 วาดตัวเลขเลือดบนหัวป้อม
+                if (sprite != null) {
+                    gc.drawImage(sprite, drawX, towerY, towerWidth, towerHeight);
+                } else {
+                    if (u instanceof CatTower) gc.setFill(Color.DARKBLUE);
+                    else gc.setFill(Color.DARKRED);
+                    gc.fillRect(drawX, towerY, towerWidth, towerHeight);
+                }
+
                 double currentHp = u.getHp();
                 double maxHp = ((Tower) u).getMaxHp();
                 String hpText = (int)currentHp + " / " + (int)maxHp;
@@ -250,24 +269,17 @@ public class Main extends Application {
                 gc.setStroke(Color.BLACK);
                 gc.setLineWidth(3);
                 gc.strokeText(hpText, textX, textY);
-
                 gc.setFill(Color.WHITE);
                 gc.fillText(hpText, textX, textY);
-
                 gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
-            }
-            // --- ยูนิตทหาร (แมว & ศัตรู) ---
-            else {
+            } else {
                 double unitWidth = u.getRenderWidth();
                 double unitHeight = u.getRenderHeight();
                 double unitY = groundY - unitHeight;
 
-                if(u instanceof UFOCat){
-                    unitY -= 50;
-                }
+                if(u instanceof UFOCat) unitY -= 50;
 
                 Image sprite = u.getCurrentSprite();
-
                 if (sprite != null) {
                     gc.drawImage(sprite, drawX, unitY, unitWidth, unitHeight);
                 } else {
@@ -276,7 +288,23 @@ public class Main extends Application {
                 }
             }
         }
+
         logic.EffectManager.getInstance().drawAll(gc, cameraX);
+    }
+
+    // 🌟 เมธอดลองซื้อแมว เปลี่ยนเป็นคืนค่า boolean
+    private boolean trySpawnUnit(Unit cat, int cost) {
+        if (logic.MoneyManager.getInstance().spend(cost)) {
+            spawnPlayerUnit(cat);
+            return true; // สำเร็จ! ให้ปุ่มเริ่มคูลดาวน์ได้
+        } else {
+            return false; // ไม่สำเร็จ ไม่ต้องคูลดาวน์
+        }
+    }
+
+    private void spawnPlayerUnit(Unit cat) {
+        units.add(cat);
+        BattleManager.getInstance().addPlayerUnit(cat);
     }
 
     private void showPauseOverlay() {
@@ -393,12 +421,6 @@ public class Main extends Application {
         return btn;
     }
 
-    private void spawnPlayerUnit(Unit cat) {
-        units.add(cat);
-        BattleManager.getInstance().addPlayerUnit(cat);
-    }
-
-    // --- เมธอดแสดงหน้าจอจบเกม (ชนะ/แพ้) ---
     private void gameOver(String resultText) {
         running = false;
         Platform.runLater(() -> {

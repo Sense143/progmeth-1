@@ -8,7 +8,7 @@ import java.util.Objects;
 public class FishCat extends SingleTargetUnit {
 
     public FishCat() {
-        super("Fish Cat", 2300, 700, 120, 2500, 140, -2.5);
+        super("Fish Cat", 2300, 700, 120, 2000, 140, -2.5);
         try {
             // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_1.png")));
@@ -33,6 +33,6 @@ public class FishCat extends SingleTargetUnit {
     }
 
     public double getRenderHeight() {
-        return 120;
+        return 150;
     }
 }

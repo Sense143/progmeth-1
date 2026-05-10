@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Pig extends AoeUnit {
 
     public Pig() {
-        super("Pig", 60, 5000, 200, 1500, 150, 1.5);
+        super("Pig", 60, 5000, 200, 1500, 150, 0.5);
         try {
             // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/pig/pig_1.png")));

@@ -38,4 +38,5 @@ public abstract class GameStage {
 
     // abstract รับ parameter เป็น units เพื่อให้ด่านเสกตัวละครยัดใส่จอได้
     protected abstract void spawnEnemyLogic(ArrayList<Unit> units);
+    public abstract String getEnemyTowerImagePath();
 }

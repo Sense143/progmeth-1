@@ -26,4 +26,9 @@ public class China extends GameStage{
             BattleManager.getInstance().addEnemyUnit(enemy);
         }
     }
+
+    @Override
+    public String getEnemyTowerImagePath() {
+        return "/tower/towertexture/ec046.png";
+    }
 }

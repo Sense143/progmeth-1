@@ -20,4 +20,9 @@ public class Thailand extends GameStage{
             BattleManager.getInstance().addEnemyUnit(enemy);
         }
     }
+
+    @Override
+    public String getEnemyTowerImagePath() {
+        return "/tower/towertexture/ec030.png";
+    }
 }
