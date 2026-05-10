@@ -41,6 +41,7 @@ public class Main extends Application {
     private ArrayList<CatButton> catButtons = new ArrayList<>();
 
     private ArrayList<Unit> units = new ArrayList<>();
+//    private java.util.concurrent.CopyOnWriteArrayList<Unit> units = new java.util.concurrent.CopyOnWriteArrayList<>();
     private Tower catTower;
     private Tower dogTower;
 
@@ -54,6 +55,8 @@ public class Main extends Application {
     private final double SCREEN_WIDTH = 1000;
     private double cameraX = 0;
     private double dragLastX = 0;
+
+    private ui.LevelUpButton levelUpButton;
 
     @Override
     public void start(Stage primaryStage) {
@@ -118,15 +121,23 @@ public class Main extends Application {
         bottomTray.setPadding(new Insets(30, 30, 10, 30));
         bottomTray.setAlignment(Pos.BOTTOM_LEFT);
 
-        // ปุ่ม Level UP
-        Button levelUpBtn = createImageButton("/button/moneyBTN_1.png", 150, 150, e -> {
-            logic.MoneyManager mm = logic.MoneyManager.getInstance();
-            if (!mm.isMaxLevel() && mm.upgradeWallet()) {
-                System.out.println("อัปเกรดกระเป๋าเป็น Lv." + mm.getMoneyLevel());
+        // 🌟 2. เปลี่ยนมาใช้ LevelUpButton ที่เราสร้างไว้
+        int startCost = logic.MoneyManager.getInstance().getUpgradeCost();
+
+        levelUpButton = new ui.LevelUpButton("/button/moneyBTN_1.png", startCost, () -> {
+            // เมื่อกดปุ่ม ให้ไปเรียกใช้คำสั่งอัปเกรดที่ MoneyManager เตรียมไว้แล้ว
+            boolean success = logic.MoneyManager.getInstance().upgradeWallet();
+
+            if (success) {
+                // 🌟 สำคัญ: ถ้าอัปเกรดสำเร็จ ให้บอกราคาใหม่กับปุ่มด้วย
+                int newCost = logic.MoneyManager.getInstance().getUpgradeCost();
+                levelUpButton.setNextCost(newCost);
+                return true;
             }
+            return false;
         });
-        levelUpBtn.setTranslateX(-40);
-        levelUpBtn.setTranslateY(23);
+        levelUpButton.setTranslateX(-40);
+        levelUpButton.setTranslateY(14);
 
         Region spacer1 = new Region();
         HBox.setHgrow(spacer1, Priority.ALWAYS);
@@ -158,7 +169,7 @@ public class Main extends Application {
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
 
-        bottomTray.getChildren().addAll(levelUpBtn, spacer1, catsBox, spacer2, cannonBtn);
+        bottomTray.getChildren().addAll(levelUpButton, spacer1, catsBox, spacer2, cannonBtn);
         gameUI.setBottom(bottomTray);
 
         // --- สร้างป้อมทัพ ---
@@ -204,8 +215,22 @@ public class Main extends Application {
         // 🌟 อัปเดตสถานะปุ่มแมว (มืด/สว่าง) แบบ Real-time ตามเงินที่มี
         int currentMoney = logic.MoneyManager.getInstance().getCurrentMoney();
         Platform.runLater(() -> {
+            // อัปเดตปุ่มแมวทั้งหมด
             for (CatButton btn : catButtons) {
                 btn.updateState(currentMoney);
+            }
+
+            // 🌟 3. อัปเดตปุ่ม Level Up ด้วย
+            if (levelUpButton != null) {
+                // ถ้าอัปเกรดจนตันแล้ว ให้ปุ่มปิดการใช้งานไปเลย
+                if (logic.MoneyManager.getInstance().isMaxLevel()) {
+                    levelUpButton.setDisable(true);
+                    levelUpButton.setText("MAX LVL");
+                    levelUpButton.setOpacity(0.5);
+                } else {
+                    // ถ้ายังไม่ตัน ก็อัปเดตสถานะตามเงินปกติ
+                    levelUpButton.updateState(currentMoney);
+                }
             }
         });
 

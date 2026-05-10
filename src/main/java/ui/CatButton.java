@@ -3,8 +3,10 @@ package ui;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
@@ -18,8 +20,6 @@ public class CatButton extends StackPane {
 
     private boolean isCooldown = false;
     private int cost;
-
-    // 🌟 เพิ่มแผ่นฟิล์มดำสำหรับเช็คเงิน (มืดเท่าแผ่นคูลดาวน์)
     private Rectangle moneyDim;
 
     public CatButton(String imagePath, double cooldownTime, int cost, BooleanSupplier onSpawnAction) {
@@ -44,11 +44,11 @@ public class CatButton extends StackPane {
             System.err.println("หาภาพไม่เจอ: " + imagePath);
         }
 
-        // 🌟 2. แผ่นฟิล์มตอนเงินไม่พอ (มืด 0.65 เท่ากับแผ่นคูลดาวน์)
+        // 2. แผ่นฟิล์มตอนเงินไม่พอ
         moneyDim = new Rectangle(imgW, imgH);
         moneyDim.setFill(Color.BLACK);
         moneyDim.setOpacity(0.65);
-        moneyDim.setVisible(true); // เริ่มเกมมาเงินยังเป็น 0 ให้ปิดฟิล์มนี้ไว้เลย
+        moneyDim.setVisible(true);
 
         // 3. แผ่นฟิล์มคูลดาวน์
         Rectangle cooldownDim = new Rectangle(imgW, 0);
@@ -60,19 +60,21 @@ public class CatButton extends StackPane {
         Rectangle clip = new Rectangle(imgW, imgH);
         this.setClip(clip);
 
-        // 🌟 นำฟิล์มเงินไปซ้อนก่อนฟิล์มคูลดาวน์
-        this.getChildren().addAll(catIcon, moneyDim, cooldownDim);
+        // 5. สร้างป้ายบอกราคา
+        Label priceLabel = new Label("$" + cost);
+        priceLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-effect: dropshadow(gaussian, black, 2, 1.0, 0, 0);");
+        StackPane.setAlignment(priceLabel, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(priceLabel, new Insets(0, 5, 2, 0));
 
-        // 5. การคลิกปุ่ม
+        // นำไปซ้อนกัน
+        this.getChildren().addAll(catIcon, moneyDim, cooldownDim, priceLabel);
+
+        // 6. การคลิกปุ่ม
         this.setOnMouseClicked(e -> {
             if (!isCooldown) {
-                // ลองรันคำสั่งเสกแมว
                 boolean success = onSpawnAction.getAsBoolean();
-
                 if (success) {
                     isCooldown = true;
-
-                    // 🌟 พอซื้อสำเร็จให้ซ่อนแผ่นเงินไปก่อน แล้วให้แผ่นคูลดาวน์กางออกแทน
                     moneyDim.setVisible(false);
                     cooldownDim.setHeight(imgH);
 
@@ -81,25 +83,18 @@ public class CatButton extends StackPane {
                     KeyFrame kf = new KeyFrame(Duration.seconds(cooldownTime), kv);
 
                     timeline.getKeyFrames().add(kf);
-                    timeline.setOnFinished(event -> isCooldown = false); // เมื่อเสร็จ ให้กดได้ใหม่
+                    timeline.setOnFinished(event -> isCooldown = false);
                     timeline.play();
                 }
             }
         });
     }
 
-    // 🌟 เมธอดอัปเดตสถานะปุ่ม
     public void updateState(int currentMoney) {
         if (isCooldown) {
-            // ถ้ากำลังคูลดาวน์อยู่ ซ่อนแผ่นเงินไปเลย จะได้ไม่มืดซ้อนกัน 2 ชั้น
             moneyDim.setVisible(false);
         } else {
-            // ถ้าไม่ได้คูลดาวน์ ให้โชว์/ซ่อน แผ่นเงินตามจำนวนเงินที่มี
-            if (currentMoney < cost) {
-                moneyDim.setVisible(true);  // เงินไม่พอ กางแผ่นดำ
-            } else {
-                moneyDim.setVisible(false); // เงินพอแล้ว ซ่อนแผ่นดำ
-            }
+            moneyDim.setVisible(currentMoney < cost);
         }
     }
 }
