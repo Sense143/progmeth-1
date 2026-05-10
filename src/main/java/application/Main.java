@@ -275,7 +275,14 @@ public class Main extends Application {
             } else {
                 double unitWidth = u.getRenderWidth();
                 double unitHeight = u.getRenderHeight();
-                double unitY = groundY - unitHeight;
+//                double unitY = groundY - unitHeight;
+                if (u.isDeadSoul()) {
+                    double soulSize = 60; // 🔧 ปรับขนาดวิญญาณตามต้องการ (เช่น กว้าง/สูง 80 เท่ากันหมด)
+                    drawX += (unitWidth - soulSize) / 2; // ขยับตำแหน่งให้วิญญาณลอยตรงกลางตัวละครพอดี
+                    unitWidth = soulSize;
+                    unitHeight = soulSize;
+                }
+                double unitY = groundY - unitHeight + u.getYOffset();
 
                 if(u instanceof UFOCat) unitY -= 50;
 

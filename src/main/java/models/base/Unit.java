@@ -1,9 +1,9 @@
 package models.base;
 
 import interfaces.Attackable;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
-import javafx.scene.paint.Color;
+
+import java.util.Objects;
 
 public abstract class Unit implements Attackable {
     protected String name;
@@ -16,24 +16,28 @@ public abstract class Unit implements Attackable {
     protected boolean isAttacking;
     protected boolean isAoe;
     protected long lastAttackTime = 0;
-    protected long timeOfDeath = 0;
     protected double attackRangeMin = 0;
     protected boolean hasDealtDamageThisAttack = false;
-    protected Unit currentTarget;
 
-    // 🌟 สร้างสถานะของตัวละคร (เดิน, โจมตี, รอคูลดาวน์)
-    public enum State { WALK, ATTACK, IDLE }
+    protected Unit currentTarget;
+    public boolean completelyDead = false; // 🌟 สำคัญ: ตัวแปรบอก Main ว่าลบศพทิ้งได้
+
+    public enum State { WALK, ATTACK, IDLE, DEAD_KNOCKBACK, DEAD_SOUL }
     protected State currentState = State.WALK;
 
-    // 🌟 ตัวแปรเก็บรูปภาพ (3 รูปเดิน, 3 รูปตี, 1 รูปรอคูลดาวน์)
     protected Image[] walkSprites = new Image[3];
     protected Image[] attackSprites = new Image[3];
     protected Image idleSprite;
+    protected Image knockbackSprite;
+    protected static Image[] sharedSoulSprites = new Image[4];
 
-    // 🌟 ตัวแปรสำหรับควบคุมความสมูทของแอนิเมชัน
     protected int currentFrame = 0;
     protected int animTick = 0;
-    protected int animSpeed = 10; // เปลี่ยนรูปทุกๆ 10 รอบลูป (60FPS)
+    protected int animSpeed = 10;
+
+    protected int deadFrameCounter = 0;
+    protected double yOffset = 0;
+    protected double soulTimer = 0;
 
     public Unit(String name, double x, double hp, double attackDamage, double attackCooldown, double attackRange, double speed) {
         this.name = name;
@@ -44,84 +48,143 @@ public abstract class Unit implements Attackable {
         this.speed = speed;
         this.attackRange = attackRange;
         this.isAttacking = false;
+        loadSharedSoulSprites();
     }
 
     @Override
     public void takeDamage(double damage) {
-        this.hp -= damage;
-        this.hp = Math.max(this.hp, 0);
+        if (this.hp > 0) {
+            this.hp -= damage;
+            this.hp = Math.max(this.hp, 0);
+        }
     }
 
     public double getX() { return x; }
+    public double getYOffset() { return yOffset; }
     public double getHp() { return hp; }
     public void setHp(double hp) { this.hp = hp; }
     public void setX(double x) { this.x = x; }
     public double getAttackRange() { return attackRange; }
     public void setAttackRange(double attackRange) { this.attackRange = attackRange; }
-
-    public double getAttackRangeMin() {
-        return attackRangeMin;
-    }
-
-    public double getSpeed() {
-        return speed;
-    }
+    public double getAttackRangeMin() { return attackRangeMin; }
+    public double getSpeed() { return speed; }
 
     public abstract void update();
 
     protected void updateAnimation() {
+        // ถ้าเลือดหมด และยังไม่ได้อยู่ในสถานะตาย ให้เริ่ม "กระเด็น" (Knockback)
+        if (this.hp <= 0 && currentState != State.DEAD_KNOCKBACK && currentState != State.DEAD_SOUL) {
+            setState(State.DEAD_KNOCKBACK);
+            this.yOffset = 0; // รีเซ็ตตำแหน่ง Y
+            this.deadFrameCounter = 0;
+        }
+
+        if (currentState == State.DEAD_KNOCKBACK) {
+            animTick++;
+
+            // 🔧 ปรับแต่งเวลาและระยะทางรวมตรงนี้
+            int totalFrames = 45; // เวลาทั้งหมดที่ใช้กระเด็น (เฟรม)
+            double totalKnockbackX = 150.0; // ระยะถอยหลังรวมทั้งหมด
+
+            // 🔧 ปรับความสูงของการเด้งแต่ละครั้ง
+            double heightBounce1 = 25.0; // ความสูงเด้งครั้งแรก
+            double heightBounce2 = 15.0; // ความสูงเด้งครั้งที่สอง (ให้เตี้ยลงเพื่อความสมจริง)
+
+            double direction = (this.speed > 0) ? -1 : 1;
+
+            // 1. แกน X: ค่อยๆ ถอยหลังไปตลอดแอนิเมชัน
+            this.x += direction * (totalKnockbackX / totalFrames);
+
+            // 2. แกน Y: แบ่งการทำงานเป็น 2 ช่วง (เด้ง 2 รอบ)
+            int halfFrames = totalFrames / 2; // แบ่งครึ่งเวลาให้แต่ละรอบ (รอบละ 20 เฟรม)
+
+            if (animTick <= halfFrames) {
+                // --- เด้งครั้งที่ 1 (เฟรม 1 ถึง 20) ---
+                if (animTick <= halfFrames / 2) {
+                    this.yOffset -= (heightBounce1 / (halfFrames / 2.0)); // ขาขึ้น
+                } else {
+                    this.yOffset += (heightBounce1 / (halfFrames / 2.0)); // ขาลง
+                }
+            } else {
+                // --- เด้งครั้งที่ 2 (เฟรม 21 ถึง 40) ---
+                int bounce2Tick = animTick - halfFrames; // รีเซ็ตตัวนับสำหรับรอบสอง
+                if (bounce2Tick <= halfFrames / 2) {
+                    this.yOffset -= (heightBounce2 / (halfFrames / 2.0)); // ขาขึ้น
+                } else {
+                    this.yOffset += (heightBounce2 / (halfFrames / 2.0)); // ขาลง
+                }
+            }
+
+            // 3. เมื่อจบแอนิเมชัน (ตกถึงพื้นรอบที่สอง)
+            if (animTick >= totalFrames) {
+                this.yOffset = 0; // จับวางให้แตะพื้นพอดี
+                animTick = 0;     // รีเซ็ตเฟรม
+                setState(State.DEAD_SOUL); // เปลี่ยนเป็นวิญญาณ
+            }
+            return;
+        }
+
+        if (currentState == State.DEAD_SOUL) {
+            this.yOffset -= 4; // วิญญาณลอยขึ้นเรื่อยๆ
+
+            // สลับเฟรมวิญญาณ (ถ้ามี 4 รูป)
+            animTick++;
+            if (animTick >= animSpeed) {
+                animTick = 0;
+                currentFrame = (currentFrame + 1) % 4;
+            }
+
+            // ถ้าลอยพ้นขอบบนของจอ ให้ยืนยันว่าตายสนิท (เพื่อไห้ Main ลบทิ้ง)
+            if (this.yOffset <= -400) {
+                this.completelyDead = true;
+            }
+            return;
+        }
+
+        // --- 3. แอนิเมชันปกติ (เดิน ตี รอ) ---
         animTick++;
         if (animTick >= animSpeed) {
             animTick = 0;
             currentFrame++;
 
             if (currentState == State.WALK) {
-                // ถ้าเดินอยู่ ให้วนลูปภาพ 0, 1, 2
-                if (currentFrame > 2) {
-                    currentFrame = 0;
-                }
+                if (currentFrame > 2) currentFrame = 0;
             }
             else if (currentState == State.ATTACK) {
-                // ถ้าโจมตีอยู่ และถึงเฟรมที่ 2 (รูปที่ 3 จังหวะฟันพอดี)
                 if (currentFrame == 2 && currentTarget != null) {
-                    processAttackDamage(currentTarget);
+                    processAttackDamage(currentTarget); // ดาเมจออกที่เฟรม 3
                 }
-
-                // พอเล่นแอนิเมชันโจมตีเสร็จ (currentFrame ทะลุ 2)
                 if (currentFrame > 2) {
                     currentFrame = 0;
-                    hasDealtDamageThisAttack = false; // ปลดล็อคดาเมจสำหรับรอบหน้า
-                    setState(State.IDLE); // ตีเสร็จให้กลับไปยืนรอคูลดาวน์ก่อน
+                    hasDealtDamageThisAttack = false;
+                    setState(State.IDLE);
                 }
             }
             else if (currentState == State.IDLE) {
-                // ยืนเฉยๆ ไม่ต้องขยับเฟรม
                 currentFrame = 0;
             }
         }
     }
 
-    // 🌟 ดึงภาพสถานะปัจจุบันไปวาด
     public Image getCurrentSprite() {
-        if (currentState == State.WALK && walkSprites[currentFrame] != null) {
-            return walkSprites[currentFrame];
-        } else if (currentState == State.ATTACK && attackSprites[currentFrame] != null) {
-            return attackSprites[currentFrame];
-        } else if (currentState == State.IDLE && idleSprite != null) {
-            return idleSprite;
-        }
+        if (currentState == State.DEAD_KNOCKBACK && knockbackSprite != null) return knockbackSprite;
+
+        // 🌟 เปลี่ยนมาดึงจาก sharedSoulSprites แทน
+        if (currentState == State.DEAD_SOUL && sharedSoulSprites[currentFrame] != null) return sharedSoulSprites[currentFrame];
+
+        if (currentState == State.WALK && walkSprites[currentFrame] != null) return walkSprites[currentFrame];
+        if (currentState == State.ATTACK && attackSprites[currentFrame] != null) return attackSprites[currentFrame];
+        if (currentState == State.IDLE && idleSprite != null) return idleSprite;
         return null;
     }
 
-    // 🌟 เปลี่ยนสถานะการกระทำ
     public void setState(State newState) {
         if (this.currentState != newState) {
             this.currentState = newState;
-            this.currentFrame = 0; // เปลี่ยนท่าปุ๊บ ให้เริ่มรูปที่ 1 ใหม่
+            this.currentFrame = 0;
             this.animTick = 0;
         }
     }
-
 
     public abstract double getRenderWidth();
     public abstract double getRenderHeight();
@@ -132,11 +195,28 @@ public abstract class Unit implements Attackable {
     }
 
     protected void processAttackDamage(Unit target) {
-        // currentFrame == 2 คือรูปที่ 3 ของ Array ครับ
         if (this.currentFrame == 2 && !hasDealtDamageThisAttack) {
             target.takeDamage(this.attackDamage);
             hasDealtDamageThisAttack = true;
-            System.out.println(this.name + " ฟันโดนที่เฟรมภาพที่ 3!");
         }
+    }
+
+    protected void loadSharedSoulSprites() {
+        // เช็คว่าถ้ายังไม่เคยโหลด (เป็น null) ค่อยโหลด
+        if (sharedSoulSprites[0] == null) {
+            try {
+                sharedSoulSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/soul/soul_1.png")));
+                sharedSoulSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/soul/soul_2.png")));
+                sharedSoulSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/soul/soul_3.png")));
+                sharedSoulSprites[3] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/soul/soul_4.png")));
+            } catch (Exception e) {
+                System.out.println("โหลดรูปวิญญาณไม่สำเร็จ: " + e.getMessage());
+            }
+        }
+    }
+
+    // 🌟 เพิ่มเมธอดนี้ลงไปใน Unit.java
+    public boolean isDeadSoul() {
+        return this.currentState == State.DEAD_SOUL;
     }
 }

@@ -22,6 +22,7 @@ public class TofuCat extends AoeUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/tofuCat/001_c_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/tofuCat/001_c_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป TofuCat ไม่สำเร็จ: " + e.getMessage());

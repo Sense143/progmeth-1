@@ -22,6 +22,7 @@ public class Stickman extends SingleTargetUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/stickman/stick_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/stickman/stick_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป Stickman ไม่สำเร็จ: " + e.getMessage());

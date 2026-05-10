@@ -29,6 +29,7 @@ public class UFOCat extends AoeUnit {
             attackSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/UFOCat/005_c_a2.png")));
             attackSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/UFOCat/005_c_a3.png")));
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/UFOCat/005_c_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/UFOCat/005_c_dead.png")));
         } catch (Exception e) {
             System.out.println("โหลดรูป UFOCat ไม่สำเร็จ: " + e.getMessage());
         }
@@ -36,8 +37,8 @@ public class UFOCat extends AoeUnit {
 
     @Override
     public void update() {
-        if(this.hp <= 0) return;
         updateAnimation();
+        if(this.hp <= 0) return;
 
         long currentTime = System.currentTimeMillis();
 

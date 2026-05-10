@@ -22,6 +22,7 @@ public class Pig extends AoeUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/pig/pig_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/pig/pig_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป Pig ไม่สำเร็จ: " + e.getMessage());

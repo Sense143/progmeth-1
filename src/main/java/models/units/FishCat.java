@@ -22,6 +22,7 @@ public class FishCat extends SingleTargetUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป FishCat ไม่สำเร็จ: " + e.getMessage());

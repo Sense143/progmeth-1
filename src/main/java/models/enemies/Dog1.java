@@ -22,6 +22,7 @@ public class Dog1 extends SingleTargetUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/dog/dog_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/dog/dog_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป Dog1 ไม่สำเร็จ: " + e.getMessage());

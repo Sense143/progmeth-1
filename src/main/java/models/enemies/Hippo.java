@@ -22,6 +22,7 @@ public class Hippo extends SingleTargetUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป Hippo ไม่สำเร็จ: " + e.getMessage());

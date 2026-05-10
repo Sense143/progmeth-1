@@ -22,6 +22,7 @@ public class KnightCat extends SingleTargetUnit {
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/knightCat/002_c_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/knightCat/002_c_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป KnightCat ไม่สำเร็จ: " + e.getMessage());

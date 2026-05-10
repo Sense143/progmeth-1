@@ -35,7 +35,7 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public boolean isDead() {
-        return this.hp <= 0;
+        return this.completelyDead;
     }
 
     @Override
@@ -45,12 +45,13 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public void update() {
-        if(this.hp <= 0){
-            return;
-        }
 
         // 🌟 1. สั่งให้ระบบรูปภาพอัปเดตทุกรอบที่ลูปทำงาน
         updateAnimation();
+
+        if(this.hp <= 0){
+            return;
+        }
 
         Unit target = BattleManager.getInstance().findSingleTargetInRange(this);
         if(target != null){

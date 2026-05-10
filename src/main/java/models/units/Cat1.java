@@ -22,6 +22,7 @@ public class Cat1 extends SingleTargetUnit{
 
             // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/normCat/000_f_idle.png")));
+            knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/normCat/000_f_dead.png")));
 
         } catch (Exception e) {
             System.out.println("โหลดรูป Cat1 ไม่สำเร็จ: " + e.getMessage());

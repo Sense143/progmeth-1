@@ -22,6 +22,7 @@ public class BattleManager {
         ArrayList<Unit> potentialTargets = (isPlayerUnit(attacker)) ? enemyUnits : playerUnits;
         ArrayList<Unit> targets = new ArrayList<>();
         for (Unit target : potentialTargets) {
+            if(target.getHp() <= 0) continue;
             double distance = Math.abs(attacker.getX() - target.getRimPosition());
             if(target instanceof TofuCat){
                 distance = Math.abs(attacker.getX() - target.getX());
@@ -39,6 +40,7 @@ public class BattleManager {
     public Unit findSingleTargetInRange(Unit attacker) {
         ArrayList<Unit> Targets = (isPlayerUnit(attacker)) ? enemyUnits : playerUnits;
         for (Unit target : Targets) {
+            if(target.getHp() <= 0) continue;
             double distance = Math.abs(attacker.getX() - target.getRimPosition());
             if(target instanceof TofuCat){
                 distance = Math.abs(attacker.getX() - target.getX());

@@ -37,7 +37,7 @@ public class AoeUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public boolean isDead() {
-        return this.hp <= 0;
+        return this.completelyDead;
     }
 
     @Override
@@ -47,12 +47,13 @@ public class AoeUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public void update() {
-        if(this.hp <= 0){
-            return;
-        }
 
         // 🌟 1. สั่งให้ระบบรูปภาพอัปเดตทุกรอบ (คลาสแม่ Unit จะจัดการ animationTimer ให้เอง)
         updateAnimation();
+
+        if(this.hp <= 0){
+            return;
+        }
 
         // ค้นหาศัตรูแบบหมู่
         ArrayList<Unit> targets = BattleManager.getInstance().findMultipleTargetsInRange(this);
