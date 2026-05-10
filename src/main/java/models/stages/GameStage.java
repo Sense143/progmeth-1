@@ -31,9 +31,10 @@ public abstract class GameStage {
     public Image getBackgroundImage() { return backgroundImage; }
 
     // Method นี้จะถูกเรียกจาก Main ทุกๆ รอบของ Game Loop
-    public void updateStage(ArrayList<Unit> units) {
+    public void updateStage(ArrayList<Unit> units, double currentHp) {
         frameCount++; // นับเวลาเพิ่มขึ้นเรื่อยๆ
         spawnEnemyLogic(units); // เรียกใช้ลอจิกของแต่ละด่าน
+        this.enemyTowerHp = currentHp;
     }
 
     // abstract รับ parameter เป็น units เพื่อให้ด่านเสกตัวละครยัดใส่จอได้

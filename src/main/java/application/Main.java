@@ -289,7 +289,7 @@ public class Main extends Application {
         }
 
         if (selectedStage != null && !dogTowerDestroyedHandled) {
-            selectedStage.updateStage(units);
+            selectedStage.updateStage(units, dogTower.getHp());
         }
 
         // ระบบเงิน และ เอฟเฟกต์

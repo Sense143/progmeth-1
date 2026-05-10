@@ -10,6 +10,8 @@ public class MoneyManager {
     private int upgradeCost;
     private double generationRate;
 
+    int previousMoney = 150;
+
     private MoneyManager() {
         reset();
     }
@@ -23,14 +25,16 @@ public class MoneyManager {
     public void reset() {
         this.currentMoney = 0;
         this.moneyLevel = 1;
+        previousMoney = 150;
         updateStats();
     }
 
     // อัปเดตสเตตัสกระเป๋าตังค์ตามเลเวลปัจจุบัน
     private void updateStats() {
-        this.maxMoney = 100 + (moneyLevel * 100);
+        this.maxMoney = (int) (previousMoney * 1.5);
+        previousMoney = this.maxMoney;
         this.upgradeCost = (int) (0.6 * this.maxMoney);
-        this.generationRate = 0.3 + (moneyLevel * 0.15); // ความเร็วเงินเด้ง (คำนวณทุกเฟรม)
+        this.generationRate = (double) this.maxMoney / 600; // ความเร็วเงินเด้ง (คำนวณทุกเฟรม)
     }
 
     // เรียกใช้ทุกๆ เฟรม (60 ครั้ง/วินาที)
