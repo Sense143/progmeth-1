@@ -45,40 +45,35 @@ public class SingleTargetUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public void update() {
-
-        // 🌟 1. สั่งให้ระบบรูปภาพอัปเดตทุกรอบที่ลูปทำงาน
+        // 1. อัปเดตแอนิเมชัน
         updateAnimation();
 
-        if(this.hp <= 0){
+        if(this.hp <= 0 || currentState == State.DEAD_KNOCKBACK || currentState == State.DEAD_SOUL) {
             return;
         }
 
         Unit target = BattleManager.getInstance().findSingleTargetInRange(this);
-        if(target != null){
+        if(target != null) {
             isAttacking = true;
             long currentTime = System.currentTimeMillis();
 
-            // 🌟 2. Logic จัดการรูปโจมตี กับ รูปคูลดาวน์
-            // สมมติให้รูปโจมตี (ง้างมือ) แสดงผลเป็นเวลา 500ms หลังทำดาเมจ
-            long timeSinceLastAttack = currentTime - lastAttackTime;
+            // 2. ถ้ารอคูลดาวน์ครบแล้ว และ "ไม่ได้กำลังง้างตีอยู่" ให้เริ่มตี!
+            if (currentTime - lastAttackTime >= attackCooldown && currentState != State.ATTACK) {
+                setState(State.ATTACK); // เริ่มแอนิเมชันง้างตี
+                lastAttackTime = currentTime;
+                hasDealtDamageThisAttack = false;
 
-            if (timeSinceLastAttack < 500) {
-                // พึ่งโจมตีไปไม่นาน ให้แสดงท่า ATTACK วนไป
-                setState(State.ATTACK);
-            } else if (timeSinceLastAttack >= attackCooldown) {
-                // คูลดาวน์เสร็จแล้ว! โจมตีเลย (lastAttackTime จะถูกรีเซ็ตในนี้)
-                setState(State.ATTACK);
-                this.Attack(target);
-            } else {
-                // ตีเสร็จแล้ว แต่คูลดาวน์ยังไม่เสร็จ ให้ยืนรอ (IDLE)
-                setState(State.IDLE);
+                // 3. ล็อคเป้าหมายไว้ ให้ Unit.java เอาไปลดเลือดตอนรูปที่ 3
+                currentTargets.clear();
+                currentTargets.add(target);
             }
-        }
-        else{
+        } else {
             isAttacking = false;
-            // 🌟 3. ไม่มีศัตรูในระยะ ให้เปลี่ยนท่าเป็นเดิน (WALK)
-            setState(State.WALK);
-            this.move();
+            // 4. ถ้าไม่มีเป้าหมาย และ "ไม่ได้ง้างตีค้างอยู่" ค่อยเดินหน้าต่อ
+            if (currentState != State.ATTACK) {
+                setState(State.WALK);
+                this.move();
+            }
         }
     }
 

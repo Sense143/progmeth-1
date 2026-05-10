@@ -47,42 +47,35 @@ public class AoeUnit extends Unit implements Attackable, Moveable {
 
     @Override
     public void update() {
-
-        // 🌟 1. สั่งให้ระบบรูปภาพอัปเดตทุกรอบ (คลาสแม่ Unit จะจัดการ animationTimer ให้เอง)
         updateAnimation();
 
-        if(this.hp <= 0){
+        if(this.hp <= 0 || currentState == State.DEAD_KNOCKBACK || currentState == State.DEAD_SOUL) {
             return;
         }
 
-        // ค้นหาศัตรูแบบหมู่
         ArrayList<Unit> targets = BattleManager.getInstance().findMultipleTargetsInRange(this);
 
-        if(targets != null && !targets.isEmpty()){
+        if(targets != null && !targets.isEmpty()) {
             isAttacking = true;
             long currentTime = System.currentTimeMillis();
 
-            // 🌟 2. Logic จัดการรูปโจมตี กับ รูปคูลดาวน์
-            // ให้รูปโจมตี (ง้างมือ) แสดงผลเป็นเวลา 500ms หลังทำดาเมจ
-            long timeSinceLastAttack = currentTime - lastAttackTime;
+            // ถ้ารอคูลดาวน์ครบแล้ว และไม่ได้ตีอยู่
+            if (currentTime - lastAttackTime >= attackCooldown && currentState != State.ATTACK) {
+                setState(State.ATTACK); // เริ่มง้างตี
+                lastAttackTime = currentTime;
+                hasDealtDamageThisAttack = false;
 
-            if (timeSinceLastAttack < 500) {
-                // พึ่งโจมตีไปไม่นาน ให้แสดงท่า ATTACK วนไป
-                setState(State.ATTACK);
-            } else if (timeSinceLastAttack >= attackCooldown) {
-                // คูลดาวน์เสร็จแล้ว! โจมตีเลย แล้วเปลี่ยนเป็นท่า ATTACK
-                setState(State.ATTACK);
-                this.Attack(targets);
-            } else {
-                // ตีเสร็จแล้ว แต่คูลดาวน์ยังไม่เสร็จ ให้ยืนรอ (IDLE)
-                setState(State.IDLE);
+                // ส่งลิสต์เป้าหมายทั้งหมดไปให้ Unit.java ทำดาเมจหมู่ที่รูปที่ 3
+                currentTargets.clear();
+                currentTargets.addAll(targets);
             }
-        }
-        else{
+        } else {
             isAttacking = false;
-            // 🌟 3. ไม่มีศัตรูในระยะ ให้เปลี่ยนท่าเป็นเดิน (WALK)
-            setState(State.WALK);
-            this.move();
+            // ถ้าศัตรูตายหมดแล้ว และง้างตีเสร็จแล้ว ให้เดินต่อ
+            if (currentState != State.ATTACK) {
+                setState(State.WALK);
+                this.move();
+            }
         }
     }
 

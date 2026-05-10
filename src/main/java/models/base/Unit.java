@@ -3,6 +3,7 @@ package models.base;
 import interfaces.Attackable;
 import javafx.scene.image.Image;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 public abstract class Unit implements Attackable {
@@ -19,7 +20,7 @@ public abstract class Unit implements Attackable {
     protected double attackRangeMin = 0;
     protected boolean hasDealtDamageThisAttack = false;
 
-    protected Unit currentTarget;
+    protected ArrayList<Unit> currentTargets = new ArrayList<>();
     public boolean completelyDead = false; // 🌟 สำคัญ: ตัวแปรบอก Main ว่าลบศพทิ้งได้
 
     public enum State { WALK, ATTACK, IDLE, DEAD_KNOCKBACK, DEAD_SOUL }
@@ -151,13 +152,15 @@ public abstract class Unit implements Attackable {
                 if (currentFrame > 2) currentFrame = 0;
             }
             else if (currentState == State.ATTACK) {
-                if (currentFrame == 2 && currentTarget != null) {
-                    processAttackDamage(currentTarget); // ดาเมจออกที่เฟรม 3
+                // ดาเมจออกที่เฟรม 3 (index 2) และต้องยังไม่ได้ทำดาเมจในรอบนี้
+                if (currentFrame == 2 && !hasDealtDamageThisAttack) {
+                    processAttackDamage();
                 }
+                // ถ้าจบแอนิเมชันโจมตีแล้ว (พ้นเฟรม 3)
                 if (currentFrame > 2) {
                     currentFrame = 0;
                     hasDealtDamageThisAttack = false;
-                    setState(State.IDLE);
+                    setState(State.IDLE); // กลับไปยืนรอ
                 }
             }
             else if (currentState == State.IDLE) {
@@ -194,11 +197,13 @@ public abstract class Unit implements Attackable {
         else return this.x - (this.getRenderWidth())/2;
     }
 
-    protected void processAttackDamage(Unit target) {
-        if (this.currentFrame == 2 && !hasDealtDamageThisAttack) {
-            target.takeDamage(this.attackDamage);
-            hasDealtDamageThisAttack = true;
+    protected void processAttackDamage() {
+        if (currentTargets != null && !currentTargets.isEmpty()) {
+            for (Unit target : currentTargets) {
+                target.takeDamage(this.attackDamage);
+            }
         }
+        hasDealtDamageThisAttack = true; // ล็อคไม่ให้ดาเมจออกซ้ำจนกว่าจะง้างตีใหม่
     }
 
     protected void loadSharedSoulSprites() {
