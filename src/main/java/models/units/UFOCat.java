@@ -116,19 +116,8 @@ public class UFOCat extends AoeUnit {
             }
         }
 
-        // 🌟 3. โซนทำดาเมจ! (แก้ไขตรงนี้ให้ตีเข้าชัวร์ๆ)
-        if (!targetsToHitNow.isEmpty()) {
-
-            // ลองเรียกของเดิมดูก่อน
-            // this.Attack(targetsToHitNow);
-
-            // ⚠️ ถ้าระบบเดิมด้านบนไม่ทำงาน ให้ใช้การ "ลดเลือดตรงๆ" แบบนี้แทนครับ:
-            for (Unit t : targetsToHitNow) {
-                // สมมติว่าพลังโจมตีคือ 300 คุณสามารถใช้คำสั่งลด HP ของเกมคุณได้เลย
-                // เช่น t.takeDamage(300);
-                // หรือใช้ Getter/Setter แบบนี้:
-                t.setHp(t.getHp() - this.attackDamage);
-            }
+        for (Unit t : targetsToHitNow) {
+            t.takeDamage(this.attackDamage);
         }
 
         // 4. วาด Effect ระเบิด

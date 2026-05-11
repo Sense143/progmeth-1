@@ -1,8 +1,6 @@
 package application;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javax.sound.sampled.AudioFormat;
@@ -32,7 +30,7 @@ import models.stages.*;
 import models.units.*;
 import logic.BattleManager;
 import ui.CannonButton;
-import ui.CatButton; // 🌟 Import ปุ่มแมว
+import ui.CatButton;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -40,15 +38,9 @@ import java.util.Objects;
 public class Main extends Application {
 
     private StackPane root;
-    private BorderPane gameUI;
-
     private Label moneyLabel;
-
-    // 🌟 ตัวแปรเก็บปุ่มแมวทั้งหมด เพื่อเอาไว้อัปเดตสถานะตอนเงินเด้ง
     private ArrayList<CatButton> catButtons = new ArrayList<>();
-
     private ArrayList<Unit> units = new ArrayList<>();
-    //    private java.util.concurrent.CopyOnWriteArrayList<Unit> units = new java.util.concurrent.CopyOnWriteArrayList<>();
     private Tower catTower;
     private Tower dogTower;
 
@@ -59,7 +51,6 @@ public class Main extends Application {
     private GameStage selectedStage;
 
     private ArrayList<models.base.CannonWave> activeWaves = new ArrayList<>();
-    private boolean isTowerFiring = false;
     private Image towerNormal = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase.png")));
     private Image towerFire = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase_firing.png")));
 
@@ -130,7 +121,7 @@ public class Main extends Application {
             dragLastX = e.getSceneX();
         });
 
-        gameUI = new BorderPane();
+        BorderPane gameUI = new BorderPane();
         gameUI.setPickOnBounds(false);
 
         // --- แถบด้านบน ---
@@ -213,39 +204,12 @@ public class Main extends Application {
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-//        CannonButton cannonBtn = new CannonButton("/button/cannonBTN_1.png", 30.0, () -> {
-//            // 1. สร้างลำแสง
-//            activeWaves.add(new models.base.CannonWave(catTower.getX()));
-//
-//            // 2. สลับรูปฐานเป็นตอนยิง
-//            isTowerFiring = true;
-//            catTower.setCurrentSprite(towerFire); // ต้องมีเมธอด setCurrentSprite ในคลาส Tower
-//
-//            // 3. หลังจาก 1 วินาที ให้ฐานกลับเป็นรูปปกติ
-//            new Thread(() -> {
-//                try { Thread.sleep(1000); } catch (Exception e) {}
-//                isTowerFiring = false;
-//                catTower.setCurrentSprite(towerNormal);
-//            }).start();
-//        });
         CannonButton cannonBtn = new CannonButton("/button/cannonBTN_1.png", 30.0, () -> {
-            // 1. ยิงคลื่น
             activeWaves.add(new CannonWave(catTower.getX()));
-
-            // 2. สลับรูปฐานเป็นตอนยิง (Optional: ถ้าต้องการความสวยงาม)
-            isTowerFiring = true;
             catTower.setCurrentSprite(towerFire);
-
-            // ใช้ Timeline สั้นๆ ใน Main เพื่อเปลี่ยนรูปฐานกลับ
-            javafx.animation.PauseTransition towerReset = new javafx.animation.PauseTransition(Duration.seconds(1));
-            towerReset.setOnFinished(ev -> {
-                isTowerFiring = false;
-                catTower.setCurrentSprite(towerNormal);
-            });
+            PauseTransition towerReset = new PauseTransition(Duration.seconds(1));
+            towerReset.setOnFinished(ev -> catTower.setCurrentSprite(towerNormal));
             towerReset.play();
-
-            // ❌ ไม่ต้องสั่ง cannonBtn.setVisible(false) ที่นี่แล้ว
-            // เพราะข้างใน CannonButton.java มันสั่งตัวเองไปแล้วครับ
         });
         cannonBtn.setTranslateX(40);
         cannonBtn.setTranslateY(23);
@@ -430,7 +394,6 @@ public class Main extends Application {
             } else {
                 double unitWidth = u.getRenderWidth();
                 double unitHeight = u.getRenderHeight();
-//                double unitY = groundY - unitHeight;
                 if (u.isDeadSoul()) {
                     double soulSize = 60; // 🔧 ปรับขนาดวิญญาณตามต้องการ (เช่น กว้าง/สูง 80 เท่ากันหมด)
                     drawX += (unitWidth - soulSize) / 2; // ขยับตำแหน่งให้วิญญาณลอยตรงกลางตัวละครพอดี
@@ -714,30 +677,6 @@ public class Main extends Application {
         btn.setCursor(Cursor.HAND);
         btn.setOnMouseEntered(e -> btn.setOpacity(0.85));
         btn.setOnMouseExited(e -> btn.setOpacity(1.0));
-        return btn;
-    }
-
-    private Button createImageButton(String imagePath, int w, int h, javafx.event.EventHandler<javafx.event.ActionEvent> action) {
-        Button btn = new Button();
-        btn.setPrefSize(90, 95);
-        btn.setStyle("-fx-background-color: transparent; -fx-font-size: 14px; -fx-font-weight: bold;");
-        btn.setCursor(Cursor.HAND);
-        btn.setOnMousePressed(e -> btn.setOpacity(0.6));
-        btn.setOnMouseReleased(e -> btn.setOpacity(1.0));
-
-        try {
-            javafx.scene.image.ImageView icon = new javafx.scene.image.ImageView(new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream(imagePath))));
-            icon.setFitWidth(w);
-            icon.setFitHeight(h);
-            icon.setPreserveRatio(true);
-            btn.setGraphic(icon);
-            btn.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
-        } catch (Exception e) {
-            System.err.println("หาภาพปุ่มไม่เจอ: " + imagePath);
-            btn.setStyle("-fx-background-color: #DDDDDD; -fx-font-size: 14px; -fx-font-weight: bold;");
-        }
-
-        if (action != null) btn.setOnAction(action);
         return btn;
     }
 
