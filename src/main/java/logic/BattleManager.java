@@ -21,6 +21,9 @@ public class BattleManager {
     private ArrayList<Unit> playerUnits = new ArrayList<>();
     private ArrayList<Unit> enemyUnits = new ArrayList<>();
 
+    /** Private constructor — use {@link #getInstance()} to obtain the singleton. */
+    private BattleManager() {}
+
     /**
      * Returns the shared singleton instance, creating it on first call.
      *

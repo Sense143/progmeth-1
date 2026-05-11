@@ -44,13 +44,22 @@ public abstract class GameStage {
         }
     }
 
-    /** @return the stage's display name */
+    /**
+     * Returns the stage's display name shown in the HUD.
+     * @return stage name
+     */
     public String getStageName() { return stageName; }
 
-    /** @return the current (live) HP of the enemy tower */
+    /**
+     * Returns the current (live) HP of the enemy tower, synced each frame.
+     * @return enemy tower HP
+     */
     public double getEnemyTowerHp() { return enemyTowerHp; }
 
-    /** @return the background panorama image */
+    /**
+     * Returns the background panorama image drawn behind the battlefield.
+     * @return background image
+     */
     public Image getBackgroundImage() { return backgroundImage; }
 
     /**

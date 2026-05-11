@@ -125,6 +125,9 @@ public class Main extends Application {
     /** Horizontal shake offset for the dog tower during destruction. */
     private double dogTowerShakeX = 0;
 
+    /** Default constructor required by the JavaFX {@link Application} lifecycle. */
+    public Main() {}
+
     /**
      * JavaFX application entry point. Builds the root pane, shows the main
      * menu, and configures the primary stage.

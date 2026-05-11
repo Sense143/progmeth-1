@@ -54,7 +54,18 @@ public abstract class Unit implements Attackable {
      * Animation state machine used to select the correct sprite sheet row and
      * drive movement/death behaviour.
      */
-    public enum State { WALK, ATTACK, IDLE, DEAD_KNOCKBACK, DEAD_SOUL }
+    public enum State {
+        /** Moving toward the enemy. */
+        WALK,
+        /** Mid-attack animation swing. */
+        ATTACK,
+        /** Standing still between attacks (cooldown). */
+        IDLE,
+        /** Two-bounce death knockback arc. */
+        DEAD_KNOCKBACK,
+        /** Soul floating upward after knockback completes. */
+        DEAD_SOUL
+    }
     /** Current animation state. */
     protected State currentState = State.WALK;
 
@@ -139,11 +150,20 @@ public abstract class Unit implements Attackable {
         }
     }
 
-    /** @return world X position */
+    /**
+     * Returns the unit's world X position.
+     * @return world X position
+     */
     public double getX() { return x; }
-    /** @return current vertical render offset (used by death animations) */
+    /**
+     * Returns the current vertical render offset used by death animations.
+     * @return vertical offset in pixels (upward = negative)
+     */
     public double getYOffset() { return yOffset; }
-    /** @return current HP */
+    /**
+     * Returns the unit's current HP.
+     * @return current HP
+     */
     public double getHp() { return hp; }
     /**
      * Directly sets HP. Prefer {@link #takeDamage} so floor clamping applies.
@@ -155,16 +175,25 @@ public abstract class Unit implements Attackable {
      * @param x new X position
      */
     public void setX(double x) { this.x = x; }
-    /** @return maximum attack distance in pixels */
+    /**
+     * Returns the maximum attack distance in pixels.
+     * @return attack range
+     */
     public double getAttackRange() { return attackRange; }
     /**
      * Overrides the attack range at runtime.
      * @param attackRange new range in pixels
      */
     public void setAttackRange(double attackRange) { this.attackRange = attackRange; }
-    /** @return minimum attack distance (inner dead zone) in pixels */
+    /**
+     * Returns the minimum attack distance (inner dead zone) in pixels.
+     * @return minimum attack range
+     */
     public double getAttackRangeMin() { return attackRangeMin; }
-    /** @return movement speed in pixels per frame */
+    /**
+     * Returns the movement speed in pixels per frame (negative = moves left).
+     * @return speed
+     */
     public double getSpeed() { return speed; }
 
     /**
