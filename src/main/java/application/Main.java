@@ -43,7 +43,7 @@ public class Main extends Application {
     private ArrayList<CatButton> catButtons = new ArrayList<>();
 
     private ArrayList<Unit> units = new ArrayList<>();
-//    private java.util.concurrent.CopyOnWriteArrayList<Unit> units = new java.util.concurrent.CopyOnWriteArrayList<>();
+    //    private java.util.concurrent.CopyOnWriteArrayList<Unit> units = new java.util.concurrent.CopyOnWriteArrayList<>();
     private Tower catTower;
     private Tower dogTower;
 
@@ -130,7 +130,7 @@ public class Main extends Application {
         topBar.setAlignment(Pos.CENTER_LEFT);
 
         javafx.scene.image.ImageView pauseIcon = new javafx.scene.image.ImageView(
-            new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button/PauseBTN.png")))
+                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button/PauseBTN.png")))
         );
         pauseIcon.setFitWidth(40);
         pauseIcon.setFitHeight(40);
@@ -485,10 +485,10 @@ public class Main extends Application {
             isPaused = false;
         });
 
-        StackPane mainMenuBtn = makeLabelledButton(pauseBtnImg, "MAIN MENU", 220, 50);
+        StackPane mainMenuBtn = makeLabelledButton(pauseBtnImg, "RETURN TO MAP", 220, 50);
         mainMenuBtn.setOnMouseClicked(e -> {
             running = false;
-            showMainMenu();
+            showLevelSelection();
         });
 
         menuBox.getChildren().addAll(unpauseBtn, mainMenuBtn);
@@ -554,19 +554,19 @@ public class Main extends Application {
 
         // Country positions on the 1000x600 scaled map (pixel-sampled from 1752x990 original)
         double[][] positions = {
-            {655, 180},  // China  (yellow)
-            {834, 163},  // Korea  (reddish-brown)
-            {915, 153},  // Japan  (red)
-            {663, 328},  // Vietnam (pale brown)
-            {621, 342},  // Thailand (pink)
+                {655, 180},  // China  (yellow)
+                {834, 163},  // Korea  (reddish-brown)
+                {915, 153},  // Japan  (red)
+                {663, 328},  // Vietnam (pale brown)
+                {621, 342},  // Thailand (pink)
         };
         String[] names = {"CHINA", "KOREA", "JAPAN", "VIETNAM", "THAILAND"};
         Runnable[] actions = {
-            () -> { this.selectedStage = new China();   showGameScene(); },
-            () -> { this.selectedStage = new Korea();   showGameScene(); },
-            () -> { this.selectedStage = new Japan();   showGameScene(); },
-            () -> { this.selectedStage = new Vietnam(); showGameScene(); },
-            () -> { this.selectedStage = new Thailand(); showGameScene(); },
+                () -> { this.selectedStage = new China();   showGameScene(); },
+                () -> { this.selectedStage = new Korea();   showGameScene(); },
+                () -> { this.selectedStage = new Japan();   showGameScene(); },
+                () -> { this.selectedStage = new Vietnam(); showGameScene(); },
+                () -> { this.selectedStage = new Thailand(); showGameScene(); },
         };
 
         Image xImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/x.png")));
@@ -678,8 +678,8 @@ public class Main extends Application {
             resultLabel.setStyle("-fx-font-size: 50px; -fx-text-fill: white; -fx-font-weight: bold;");
 
             Image menuBtnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
-            StackPane menuBtn = makeLabelledButton(menuBtnImg, "RETURN TO MENU", 260, 55);
-            menuBtn.setOnMouseClicked(e -> { running = false; showMainMenu(); });
+            StackPane menuBtn = makeLabelledButton(menuBtnImg, "RETURN TO MAP", 260, 55);
+            menuBtn.setOnMouseClicked(e -> { running = false; showLevelSelection(); });
 
             box.getChildren().addAll(resultLabel, menuBtn);
             overlay.getChildren().add(box);
