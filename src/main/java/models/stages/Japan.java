@@ -7,7 +7,24 @@ import models.enemies.Snake;
 
 import java.util.ArrayList;
 
+/**
+ * Stage 2 — Japan.
+ *
+ * <p>Enemy composition: {@link Snake} and {@link Dog1}.
+ * <ul>
+ *   <li>Two snakes spawn at frames 1 and 60 (opening rush).</li>
+ *   <li>From frame 600 onward: two dogs spawn every 10 s,
+ *       staggered 6 frames apart to avoid exact overlap.</li>
+ *   <li>From frame 1200 onward: extra snakes every 10 s and every ~11.7 s.</li>
+ * </ul>
+ * Tower HP: 2000.
+ */
 public class Japan extends GameStage{
+
+    /**
+     * Constructs the Japan stage with a 2000 HP enemy tower and its
+     * background image.
+     */
     public Japan() {
         super("Japan", 2000, "/stages/bg001.png");
     }
@@ -26,16 +43,13 @@ public class Japan extends GameStage{
             BattleManager.getInstance().addEnemyUnit(startSnake2);
         }
 
-        // 🌟 แยกเงื่อนไขการเสก Dog1 ให้ห่างกัน 6 เฟรม (0.1 วินาที)
         if (frameCount >= 600) {
-            // หมาตัวแรกออกมาตอนครบรอบเป๊ะๆ
             if (frameCount % 600 == 0) {
                 Unit dogA = new Dog1();
                 units.add(dogA);
                 BattleManager.getInstance().addEnemyUnit(dogA);
             }
 
-            // หมาตัวที่สองออกมาทีหลัง 6 เฟรม (0.1 วิ)
             if (frameCount % 600 == 6) {
                 Unit dogB = new Dog1();
                 units.add(dogB);
@@ -56,6 +70,7 @@ public class Japan extends GameStage{
         }
     }
 
+    /** @return {@code "/tower/towertexture/ec038.png"} */
     @Override
     public String getEnemyTowerImagePath() {
         return "/tower/towertexture/ec038.png";

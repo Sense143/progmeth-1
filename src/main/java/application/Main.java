@@ -35,47 +35,102 @@ import ui.CatButton;
 import java.util.ArrayList;
 import java.util.Objects;
 
+/**
+ * Main entry point and primary controller for Battle Cat - Complete Edition.
+ *
+ * <p>This class owns the JavaFX {@link javafx.stage.Stage}, manages scene
+ * transitions (main menu → level selection → battle), drives the 60 FPS game
+ * loop on a background daemon thread, handles all rendering onto a
+ * {@link javafx.scene.canvas.Canvas}, and manages background music playback
+ * via {@code javax.sound.sampled.Clip} with OGG support from vorbisspi.
+ *
+ * <p>Key responsibilities:
+ * <ul>
+ *   <li>Scene lifecycle: {@link #showMainMenu()}, {@link #showLevelSelection()},
+ *       {@link #showGameScene()}, {@link #gameOver(String)}</li>
+ *   <li>Game loop: {@link #startGameThread(GraphicsContext)},
+ *       {@link #updateLogic()}, {@link #render(GraphicsContext)}</li>
+ *   <li>Unit spawning: {@link #trySpawnUnit(Unit, int)},
+ *       {@link #spawnPlayerUnit(Unit)}</li>
+ *   <li>Audio: {@link #startMenuMusic()}, {@link #stopMenuMusic()},
+ *       {@link #startGameMusic(String)}, {@link #stopGameMusic()},
+ *       {@link #playResultMusic(String)}</li>
+ * </ul>
+ */
 public class Main extends Application {
 
+    /** Root container; the active scene's content is swapped into this pane. */
     private StackPane root;
+    /** HUD label displaying current / max money and wallet level. */
     private Label moneyLabel;
+    /** All active unit-deploy buttons; updated each frame for affordability state. */
     private ArrayList<CatButton> catButtons = new ArrayList<>();
+    /** All living units on the battlefield, including both towers. */
     private ArrayList<Unit> units = new ArrayList<>();
+    /** Player's home base tower (right side). */
     private Tower catTower;
+    /** Enemy base tower (left side). */
     private Tower dogTower;
 
+    /** Pause flag; the game loop skips {@link #updateLogic()} when true. */
     private volatile boolean isPaused = false;
+    /** Running flag; set to false to terminate the game loop thread. */
     private volatile boolean running = false;
     private Thread gameThread;
 
+    /** The stage (level) currently loaded or being played. */
     private GameStage selectedStage;
 
+    /** Active cannon-wave projectiles sweeping across the battlefield. */
     private ArrayList<models.base.CannonWave> activeWaves = new ArrayList<>();
+    /** Tower sprite in idle state. */
     private Image towerNormal = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase.png")));
+    /** Tower sprite shown briefly when the cannon fires. */
     private Image towerFire = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase_firing.png")));
 
+    /** Total width of the scrollable game world in pixels. */
     private final double WORLD_WIDTH = 2500;
+    /** Visible screen width in pixels. */
     private final double SCREEN_WIDTH = 1000;
+    /** Current horizontal scroll offset (world X shown at the left edge). */
     private double cameraX = 0;
+    /** Last recorded mouse X during a drag gesture, for delta calculation. */
     private double dragLastX = 0;
 
+    /** Wallet upgrade button in the HUD. */
     private ui.LevelUpButton levelUpButton;
 
-    // Tower destruction state
+    /** True after the cat tower has been destroyed (guards one-shot handling). */
     private boolean catTowerDestroyedHandled = false;
+    /** True after the dog tower has been destroyed (guards one-shot handling). */
     private boolean dogTowerDestroyedHandled = false;
+    /** Countdown frames before the game-over overlay is shown (-1 = inactive). */
     private int gameOverCountdown = -1;
+    /** "YOU WIN!" or "YOU LOSE!" text queued for display after the countdown. */
     private String pendingGameOverText = null;
+    /** Active tower-destruction burst effects rendered on top of everything. */
     private ArrayList<models.base.TowerBurstEffect> burstEffects = new ArrayList<>();
     private java.util.Random rng = new java.util.Random();
+    /** True once the game-over overlay has been displayed. */
     private boolean isGameOver = false;
 
+    /** Looping background music clip for menus. */
     private Clip menuMusicClip;
+    /** Background music clip for the current stage (or result jingle). */
     private Clip gameMusicClip;
+    /** Frame counter used during the post-game burst-explosion sequence. */
     private int postGameFrame = 0;
+    /** Horizontal shake offset for the cat tower during destruction. */
     private double catTowerShakeX = 0;
+    /** Horizontal shake offset for the dog tower during destruction. */
     private double dogTowerShakeX = 0;
 
+    /**
+     * JavaFX application entry point. Builds the root pane, shows the main
+     * menu, and configures the primary stage.
+     *
+     * @param primaryStage the top-level window provided by the JavaFX runtime
+     */
     @Override
     public void start(Stage primaryStage) {
         root = new StackPane();
@@ -87,6 +142,15 @@ public class Main extends Application {
         primaryStage.show();
     }
 
+    /**
+     * Builds and displays the in-game battle scene for {@link #selectedStage}.
+     *
+     * <p>Clears all previous state, resets {@link logic.MoneyManager} and
+     * {@link logic.BattleManager}, constructs the HUD (top bar, unit buttons,
+     * wallet upgrade button, cannon button), places the towers, then starts the
+     * game loop via {@link #startGameThread(GraphicsContext)}.
+     * Stage-appropriate background music is started here.
+     */
     private void showGameScene() {
         stopMenuMusic();
         root.getChildren().clear();
@@ -234,6 +298,14 @@ public class Main extends Application {
         startGameThread(gc);
     }
 
+    /**
+     * Spawns a daemon background thread that drives the game loop at ~60 FPS.
+     * Each iteration calls {@link #updateLogic()} then schedules
+     * {@link #render(GraphicsContext)} on the JavaFX application thread via
+     * {@link Platform#runLater}.
+     *
+     * @param gc the graphics context for the battle canvas
+     */
     private void startGameThread(GraphicsContext gc) {
         gameThread = new Thread(() -> {
             while (running) {
@@ -253,6 +325,22 @@ public class Main extends Application {
         gameThread.start();
     }
 
+    /**
+     * Per-frame game logic update. Called from the game loop thread.
+     *
+     * <p>Responsibilities (in order):
+     * <ol>
+     *   <li>If game is over: animate units and spawn burst effects on the dead
+     *       tower, then return.</li>
+     *   <li>Advance the stage's enemy-spawn schedule.</li>
+     *   <li>Tick {@link logic.MoneyManager} and refresh all HUD buttons.</li>
+     *   <li>Update every unit; remove dead non-tower units from the board.</li>
+     *   <li>Update all active cannon waves; remove finished ones.</li>
+     *   <li>Detect first frame a tower dies: freeze enemy units, queue the
+     *       game-over text, start the result music, and begin the countdown.</li>
+     *   <li>Count down to game-over; when it reaches 0, call {@link #gameOver}.</li>
+     * </ol>
+     */
     private void updateLogic() {
         if (isGameOver) {
             for (Unit u : units) u.update();
@@ -340,6 +428,22 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Renders the current game state onto the battle canvas. Called from the
+     * JavaFX application thread via {@link Platform#runLater} each frame.
+     *
+     * <p>Drawing order:
+     * <ol>
+     *   <li>Background image (or fallback solid colour).</li>
+     *   <li>All units (towers drawn with HP text; living/dead units drawn with
+     *       their current sprite and optional shake offsets).</li>
+     *   <li>Active cannon waves.</li>
+     *   <li>UFOCat explosion effects via {@link logic.EffectManager}.</li>
+     *   <li>Tower destruction burst effects.</li>
+     * </ol>
+     *
+     * @param gc the graphics context for the battle canvas
+     */
     private void render(GraphicsContext gc) {
         // อัปเดตตัวเลขกระเป๋าเงิน
         logic.MoneyManager mm = logic.MoneyManager.getInstance();
@@ -426,7 +530,15 @@ public class Main extends Application {
         }
     }
 
-    // 🌟 เมธอดลองซื้อแมว เปลี่ยนเป็นคืนค่า boolean
+    /**
+     * Attempts to spend money and spawn a player unit onto the battlefield.
+     * Returns {@code false} without spawning if the game is already over or
+     * the player cannot afford the cost.
+     *
+     * @param cat  the pre-constructed unit to spawn on success
+     * @param cost the money cost to deduct
+     * @return {@code true} if the unit was spawned and money was spent
+     */
     private boolean trySpawnUnit(Unit cat, int cost) {
         if (catTowerDestroyedHandled || dogTowerDestroyedHandled) return false;
         if (logic.MoneyManager.getInstance().spend(cost)) {
@@ -437,11 +549,22 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Adds a player unit to the live unit list and registers it with
+     * {@link logic.BattleManager} so enemies can target it.
+     *
+     * @param cat the unit to add
+     */
     private void spawnPlayerUnit(Unit cat) {
         units.add(cat);
         BattleManager.getInstance().addPlayerUnit(cat);
     }
 
+    /**
+     * Pauses the game loop and displays a semi-transparent pause overlay with
+     * "CONTINUE" and "RETURN TO MAP" buttons. Resuming removes the overlay and
+     * clears the pause flag; returning to the map stops game music.
+     */
     private void showPauseOverlay() {
         isPaused = true;
         StackPane overlay = new StackPane();
@@ -470,6 +593,15 @@ public class Main extends Application {
         root.getChildren().add(overlay);
     }
 
+    /**
+     * Opens and decodes an OGG audio file from the classpath into a
+     * {@link Clip} ready for playback. Volume is reduced by 25 dB from the
+     * default to avoid clipping.
+     *
+     * @param path classpath resource path to the OGG file (e.g. {@code "/music/001.ogg"})
+     * @return an open, ready-to-play {@code Clip}
+     * @throws Exception if the resource cannot be found or decoded
+     */
     private Clip openClip(String path) throws Exception {
         AudioInputStream raw = AudioSystem.getAudioInputStream(
                 Objects.requireNonNull(getClass().getResource(path)));
@@ -484,6 +616,11 @@ public class Main extends Application {
         return clip;
     }
 
+    /**
+     * Starts the main-menu / level-selection background music ({@code 001.ogg})
+     * in an infinite loop. No-ops if the clip is already running. Stops and
+     * reopens the clip if it was previously paused or closed.
+     */
     private void startMenuMusic() {
         if (menuMusicClip != null && menuMusicClip.isRunning()) return;
         try {
@@ -496,6 +633,10 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Stops and releases the menu music clip. Safe to call when no menu
+     * music is playing.
+     */
     private void stopMenuMusic() {
         if (menuMusicClip != null) {
             menuMusicClip.stop();
@@ -504,6 +645,12 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Starts looping background music for the current stage. Stops any
+     * previously playing game music before opening the new clip.
+     *
+     * @param path classpath resource path to the OGG track
+     */
     private void startGameMusic(String path) {
         try {
             if (gameMusicClip != null) { gameMusicClip.stop(); gameMusicClip.close(); }
@@ -515,6 +662,10 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Stops and releases the game-stage music clip. Safe to call when no
+     * game music is playing.
+     */
     private void stopGameMusic() {
         if (gameMusicClip != null) {
             gameMusicClip.stop();
@@ -523,6 +674,12 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Stops stage music and plays a one-shot win/lose jingle. The clip is
+     * not looped so it stops naturally at the end.
+     *
+     * @param path classpath resource path to the OGG result track
+     */
     private void playResultMusic(String path) {
         stopGameMusic();
         try {
@@ -533,6 +690,10 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Builds and displays the title screen with a "START" button.
+     * Stops the game loop (if running) and starts menu music.
+     */
     private void showMainMenu() {
         root.getChildren().clear();
         running = false;
@@ -576,6 +737,12 @@ public class Main extends Application {
         root.getChildren().add(menuPane);
     }
 
+    /**
+     * Builds and displays the world-map level-selection screen.
+     * Five stage pins are rendered at their geographic positions on the map;
+     * clicking one sets {@link #selectedStage} and calls {@link #showGameScene()}.
+     * Menu music continues (or restarts) on this screen.
+     */
     private void showLevelSelection() {
         root.getChildren().clear();
         startMenuMusic();
@@ -657,6 +824,13 @@ public class Main extends Application {
         root.getChildren().add(mapPane);
     }
 
+    /**
+     * Spawns a {@link models.base.TowerBurstEffect} at a random position
+     * within the given tower's sprite bounds. Called repeatedly during the
+     * post-death countdown to animate the tower crumbling.
+     *
+     * @param tower the tower to spawn burst effects on
+     */
     private void spawnTowerBurst(models.base.Tower tower) {
         double tW = tower.getRenderWidth() > 0 ? tower.getRenderWidth() : 80;
         double tH = tower.getRenderHeight() > 0 ? tower.getRenderHeight() : 150;
@@ -666,6 +840,16 @@ public class Main extends Application {
         burstEffects.add(new models.base.TowerBurstEffect(wx, sy));
     }
 
+    /**
+     * Creates a {@link StackPane} that layers a text label over a button image,
+     * with hover-dim feedback. Used for pause-menu and game-over overlay buttons.
+     *
+     * @param btnImg the button background image
+     * @param text   the label text to display centred on the button
+     * @param w      button width in pixels
+     * @param h      button height in pixels
+     * @return the assembled button pane
+     */
     private StackPane makeLabelledButton(Image btnImg, String text, double w, double h) {
         javafx.scene.image.ImageView iv = new javafx.scene.image.ImageView(btnImg);
         iv.setFitWidth(w);
@@ -680,6 +864,14 @@ public class Main extends Application {
         return btn;
     }
 
+    /**
+     * Shows the game-over overlay on the JavaFX thread and sets
+     * {@link #isGameOver} so the render loop continues but logic stops.
+     * The overlay contains the result text and a "RETURN TO MAP" button that
+     * stops game music and returns to level selection.
+     *
+     * @param resultText "YOU WIN!" or "YOU LOSE!"
+     */
     private void gameOver(String resultText) {
         isGameOver = true;
         Platform.runLater(() -> {
@@ -702,6 +894,11 @@ public class Main extends Application {
         });
     }
 
+    /**
+     * Application entry point. Delegates to {@link Application#launch}.
+     *
+     * @param args command-line arguments (ignored)
+     */
     public static void main(String[] args) {
         launch(args);
     }

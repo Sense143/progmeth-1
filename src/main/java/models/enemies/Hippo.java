@@ -5,22 +5,29 @@ import models.base.SingleTargetUnit;
 
 import java.util.Objects;
 
+/**
+ * A heavy single-target enemy — massive HP, high damage, slow attack and
+ * movement. Acts as a stage mini-boss.
+ *
+ * <p>Stats: 1200 HP | 50 damage | 4000 ms cooldown | 120 px range | +2 speed.
+ */
 public class Hippo extends SingleTargetUnit {
 
+    /**
+     * Constructs a Hippo at the default enemy spawn position (X = 60) and
+     * loads its walk, attack, idle, and knockback sprites.
+     */
     public Hippo() {
         super("Hippo", 60, 1200, 50, 4000, 120, 2);
         try {
-            // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_1.png")));
             walkSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_2.png")));
             walkSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_3.png")));
 
-            // ท่าโจมตี 3 รูป
             attackSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_a1.png")));
             attackSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_a2.png")));
             attackSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_a3.png")));
 
-            // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_idle.png")));
             knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/enemy/hippo/hippo_dead.png")));
 
@@ -29,11 +36,13 @@ public class Hippo extends SingleTargetUnit {
         }
     }
 
+    /** @return 144 pixels */
     @Override
     public double getRenderWidth() {
         return 144;
     }
 
+    /** @return 120 pixels */
     @Override
     public double getRenderHeight() {
         return 120;

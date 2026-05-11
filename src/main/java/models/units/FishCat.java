@@ -5,22 +5,28 @@ import models.base.SingleTargetUnit;
 
 import java.util.Objects;
 
+/**
+ * A tanky single-target cat unit with long range and high damage.
+ *
+ * <p>Stats: 700 HP | 120 damage | 2000 ms cooldown | 140 px range | −2.5 speed.
+ */
 public class FishCat extends SingleTargetUnit {
 
+    /**
+     * Constructs a FishCat at the default spawn position (X = 2300) and loads
+     * its walk, attack, idle, and knockback sprites.
+     */
     public FishCat() {
         super("Fish Cat", 2300, 700, 120, 2000, 140, -2.5);
         try {
-            // ท่าเดิน 3 รูป
             walkSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_1.png")));
             walkSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_2.png")));
             walkSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_3.png")));
 
-            // ท่าโจมตี 3 รูป
             attackSprites[0] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_a1.png")));
             attackSprites[1] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_a2.png")));
             attackSprites[2] = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_a3.png")));
 
-            // ท่ายืนรอคูลดาวน์ 1 รูป
             idleSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_idle.png")));
             knockbackSprite = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cat/animation/fishCat/006_f_dead.png")));
 
@@ -29,10 +35,12 @@ public class FishCat extends SingleTargetUnit {
         }
     }
 
+    /** @return 150 pixels */
     public double getRenderWidth() {
         return 150;
     }
 
+    /** @return 150 pixels */
     public double getRenderHeight() {
         return 150;
     }

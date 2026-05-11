@@ -12,14 +12,37 @@ import javafx.scene.layout.StackPane;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 
+/**
+ * A wallet-upgrade button displayed in the in-game HUD.
+ *
+ * <p>Shows the current wallet level and upgrade cost. When the player cannot
+ * afford the upgrade, the icon dims to 50% opacity while the cost label
+ * remains fully visible. Once the wallet reaches its maximum level the button
+ * is permanently disabled and labelled "MAX LEVEL".
+ *
+ * <p>Call {@link #updateState(int)} every frame with the player's current
+ * money to keep the affordability state in sync. Call {@link #markMaxLevel()}
+ * after a successful upgrade that reaches the cap.
+ */
 public class LevelUpButton extends Button {
 
+    /** Current wallet level (1-indexed, displayed in the label). */
     private int currentLevel = 1;
+    /** Cost of the next upgrade, shown in the label. */
     private int currentCost;
+    /** {@code true} once the wallet has reached the maximum upgrade level. */
     private boolean maxLevel = false;
     private Label textLabel;
-    private ImageView icon; // 🌟 ย้ายมาประกาศตรงนี้เพื่อให้เรียกใช้ใน updateState ได้
+    private ImageView icon;
 
+    /**
+     * Constructs a wallet-upgrade button.
+     *
+     * @param imagePath       classpath resource path to the wallet icon image
+     * @param startCost       cost of the first upgrade
+     * @param onUpgradeAction called when the button is clicked; should attempt
+     *                        the upgrade and return {@code true} on success
+     */
     public LevelUpButton(String imagePath, int startCost, BooleanSupplier onUpgradeAction) {
         this.currentCost = startCost;
 
@@ -33,14 +56,12 @@ public class LevelUpButton extends Button {
         StackPane graphicContainer = new StackPane();
 
         try {
-            // 🌟 ใช้ this.icon เพื่อเก็บอ้างอิงตัวรูปไว้
             this.icon = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream(imagePath))));
             this.icon.setFitWidth(150);
             this.icon.setFitHeight(150);
             this.icon.setPreserveRatio(true);
 
             textLabel = new Label();
-            // ปรับฟอนต์ให้ใหญ่และชัดขึ้นตามที่คุณแก้มา (20px)
             textLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white; -fx-effect: dropshadow(gaussian, black, 3, 1.0, 0, 0);");
 
             StackPane.setAlignment(textLabel, Pos.BOTTOM_CENTER);
@@ -65,6 +86,10 @@ public class LevelUpButton extends Button {
         });
     }
 
+    /**
+     * Refreshes the button label.
+     * Shows "MAX LEVEL" when the wallet is maxed; otherwise "Lv.N | $cost".
+     */
     private void updateText() {
         if (textLabel == null) return;
         if (maxLevel) {
@@ -74,6 +99,10 @@ public class LevelUpButton extends Button {
         }
     }
 
+    /**
+     * Locks the button permanently to indicate the wallet is fully upgraded.
+     * Restores the icon to full opacity and disables the button.
+     */
     public void markMaxLevel() {
         maxLevel = true;
         if (icon != null) icon.setOpacity(1.0);
@@ -81,23 +110,31 @@ public class LevelUpButton extends Button {
         updateText();
     }
 
+    /**
+     * Updates the cost shown in the label for the next upgrade.
+     * Call this after each successful upgrade to show the upcoming cost.
+     *
+     * @param newCost the cost of the next wallet upgrade
+     */
     public void setNextCost(int newCost) {
         this.currentCost = newCost;
         updateText();
     }
 
-    // 🌟 แก้ไข Logic ตรงนี้ใหม่
+    /**
+     * Refreshes the button's enabled/disabled state and icon opacity based on
+     * whether the player can currently afford the upgrade. No-ops if already
+     * at max level.
+     *
+     * @param playerMoney the player's current money amount
+     */
     public void updateState(int playerMoney) {
         if (maxLevel) return;
         if (playerMoney < currentCost) {
-            // ลดความสว่างเฉพาะตัวรูป (Icon)
             if (icon != null) icon.setOpacity(0.5);
-
-            // ตัวปุ่มหลัก (และตัวหนังสือ) ให้คงความชัดไว้ 100%
             this.setOpacity(1.0);
             this.setDisable(true);
         } else {
-            // กลับมาสว่างปกติทั้งรูปและปุ่ม
             if (icon != null) icon.setOpacity(1.0);
             this.setDisable(false);
         }

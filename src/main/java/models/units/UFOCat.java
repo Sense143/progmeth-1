@@ -9,14 +9,34 @@ import models.enemies.Stickman;
 import java.util.ArrayList;
 import java.util.Objects;
 
+/**
+ * An AoE cat unit that fires a three-wave rolling explosion attack.
+ *
+ * <p>Stats: 2300 HP | 300 damage | 3000 ms cooldown | 210 px range | −2.5 speed.
+ *
+ * <p>When the attack fires, three explosions are launched sequentially with a
+ * 150 ms delay between them. Each wave covers a 70 px band of the range:
+ * wave 1 hits [0–70 px], wave 2 hits [70–140 px], wave 3 hits [140–210 px].
+ * The rolling wave is driven by {@link #isWaveActive} and {@link #currentWaveStep}
+ * so it runs independently of the base {@link AoeUnit} attack loop.
+ */
 public class UFOCat extends AoeUnit {
 
+    /** True while a three-wave attack sequence is in progress. */
     private boolean isWaveActive = false;
+    /** Index (0–2) of the wave currently waiting to fire. */
     private int currentWaveStep = 0;
+    /** Timestamp of the last wave step, used to space waves 150 ms apart. */
     private long lastWaveTime = 0;
-    private final double WAVE_WIDTH = 70; // ความกว้างแต่ละลูกคลื่น
-    private final double MAX_WAVE_RANGE = 210; // ระยะรวมทั้งหมด
+    /** Width in pixels of each individual wave band. */
+    private final double WAVE_WIDTH = 70;
+    /** Total attack range covered by all three waves combined. */
+    private final double MAX_WAVE_RANGE = 210;
 
+    /**
+     * Constructs a UFOCat at the default spawn position (X = 2300) and loads
+     * its walk, attack, idle, and knockback sprites.
+     */
     public UFOCat() {
         super("UFO Cat", 2300, 300, 150, 3000, 210, -2.5);
         this.attackRangeMin = 0;
@@ -35,6 +55,16 @@ public class UFOCat extends AoeUnit {
         }
     }
 
+    /**
+     * Per-frame AI loop with two phases:
+     * <ul>
+     *   <li><b>Wave-active phase:</b> fires one wave step every 150 ms until
+     *       all three steps are complete, then clears the wave flag.</li>
+     *   <li><b>Normal phase:</b> looks for targets in the full 210 px range;
+     *       when found and the cooldown has elapsed, starts the wave sequence
+     *       by immediately firing wave step 0.</li>
+     * </ul>
+     */
     @Override
     public void update() {
         updateAnimation();
@@ -42,16 +72,14 @@ public class UFOCat extends AoeUnit {
 
         long currentTime = System.currentTimeMillis();
 
-        // --- โหมดกำลังปล่อยคลื่นระเบิด ---
         if (isWaveActive) {
             setState(State.ATTACK);
 
-            if (currentTime - lastWaveTime >= 150) { // ดีเลย์ระหว่างระเบิดแต่ละลูก
+            if (currentTime - lastWaveTime >= 150) {
                 executeWaveStep(currentWaveStep);
                 lastWaveTime = currentTime;
                 currentWaveStep++;
 
-                // ถ้าปล่อยครบ 3 ลูกแล้ว ให้จบเทิร์น
                 if (currentWaveStep >= 3) {
                     isWaveActive = false;
                     currentWaveStep = 0;
@@ -60,7 +88,6 @@ public class UFOCat extends AoeUnit {
             return;
         }
 
-        // --- โหมดปกติ: เดินค้นหาศัตรู ---
         this.attackRange = MAX_WAVE_RANGE;
         this.attackRangeMin = 0;
 
@@ -73,13 +100,12 @@ public class UFOCat extends AoeUnit {
             if (timeSinceLastAttack < 500) {
                 setState(State.ATTACK);
             } else if (timeSinceLastAttack >= attackCooldown) {
-                // ถึงเวลาโจมตี -> เริ่มเข้าโหมดปล่อย Wave!
                 isWaveActive = true;
                 currentWaveStep = 0;
                 lastWaveTime = currentTime;
                 lastAttackTime = currentTime;
 
-                executeWaveStep(currentWaveStep); // ยิงลูกแรกทันที!
+                executeWaveStep(currentWaveStep);
                 currentWaveStep++;
             } else {
                 setState(State.IDLE);
@@ -91,25 +117,36 @@ public class UFOCat extends AoeUnit {
         }
     }
 
+    /**
+     * Fires a single wave step: collects all enemies in the full range, then
+     * filters to those inside the current wave's band, deals damage to each,
+     * and spawns an explosion effect at the band's centre.
+     *
+     * <p>Wave bands (measured from the UFOCat's centre):
+     * <ul>
+     *   <li>Step 0: 0 – 70 px</li>
+     *   <li>Step 1: 70 – 140 px</li>
+     *   <li>Step 2: 140 – 210 px</li>
+     * </ul>
+     *
+     * @param cnt the wave step index (0–2); {@code currentWaveStep} is used
+     *            inside the method to compute the band boundaries
+     */
     private void executeWaveStep(int cnt) {
-        // 1. ดึงเป้าหมายทั้งหมดในระยะ 210 มาเลย (เพื่อให้ BattleManager มองเห็นศัตรูแน่นอน)
         this.attackRangeMin = 0;
         this.attackRange = MAX_WAVE_RANGE;
         ArrayList<Unit> allTargets = BattleManager.getInstance().findMultipleTargetsInRange(this);
 
         ArrayList<Unit> targetsToHitNow = new ArrayList<>();
-        double currentMaxRange = (currentWaveStep + 1) * WAVE_WIDTH; // 70, 140, 210
+        double currentMaxRange = (currentWaveStep + 1) * WAVE_WIDTH;
 
-        // 2. คัดกรองศัตรูด้วยตัวเอง
         if (allTargets != null) {
             for (Unit t : allTargets) {
-                // คำนวณระยะห่าง
                 double distance = Math.abs(this.getX() - t.getRimPosition());
                 if(t instanceof Stickman){
                     distance = Math.abs(this.getX() - t.getX());
                 }
 
-                // ถ้าศัตรูอยู่ในวงของคลื่นลูกนี้ และ "ยังไม่เคยโดนระเบิดลูกก่อนหน้า"
                 if (distance <= currentMaxRange && distance >= currentWaveStep * WAVE_WIDTH) {
                     targetsToHitNow.add(t);
                 }
@@ -120,7 +157,6 @@ public class UFOCat extends AoeUnit {
             t.takeDamage(this.attackDamage);
         }
 
-        // 4. วาด Effect ระเบิด
         double direction = (this.getSpeed() < 0) ? -1 : 1;
         double waveCenterDistance = (currentWaveStep * WAVE_WIDTH) + (WAVE_WIDTH / 2);
 
@@ -130,6 +166,9 @@ public class UFOCat extends AoeUnit {
         logic.EffectManager.getInstance().spawnExplosion(spawnX, 410);
     }
 
+    /** @return 100 pixels */
     public double getRenderWidth() { return 100; }
+
+    /** @return 120 pixels */
     public double getRenderHeight() { return 120; }
 }

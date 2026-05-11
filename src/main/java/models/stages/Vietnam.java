@@ -6,8 +6,21 @@ import models.enemies.Stickman;
 
 import java.util.ArrayList;
 
+/**
+ * Stage 4 — Vietnam.
+ *
+ * <p>Enemy composition: {@link Stickman} spam.
+ * <ul>
+ *   <li>A Stickman spawns every 0.5 s (30 frames) — relentless pressure.</li>
+ * </ul>
+ * Tower HP: 3000.
+ */
 public class Vietnam extends GameStage{
 
+    /**
+     * Constructs the Vietnam stage with a 3000 HP enemy tower and its
+     * background image.
+     */
     public Vietnam() {
         super("Vietnam", 3000, "/stages/bg004.png");
     }
@@ -21,6 +34,7 @@ public class Vietnam extends GameStage{
         }
     }
 
+    /** @return {@code "/tower/towertexture/ec014.png"} */
     @Override
     public String getEnemyTowerImagePath() {
         return "/tower/towertexture/ec014.png";
