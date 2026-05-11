@@ -5,6 +5,11 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -73,6 +78,9 @@ public class Main extends Application {
     private ArrayList<models.base.TowerBurstEffect> burstEffects = new ArrayList<>();
     private java.util.Random rng = new java.util.Random();
     private boolean isGameOver = false;
+
+    private Clip menuMusicClip;
+    private Clip gameMusicClip;
     private int postGameFrame = 0;
     private double catTowerShakeX = 0;
     private double dogTowerShakeX = 0;
@@ -89,6 +97,7 @@ public class Main extends Application {
     }
 
     private void showGameScene() {
+        stopMenuMusic();
         root.getChildren().clear();
         units.clear();
         catButtons.clear(); // 🌟 เคลียร์ปุ่มเก่าตอนเริ่มด่าน
@@ -168,6 +177,9 @@ public class Main extends Application {
                 // 🌟 สำคัญ: ถ้าอัปเกรดสำเร็จ ให้บอกราคาใหม่กับปุ่มด้วย
                 int newCost = logic.MoneyManager.getInstance().getUpgradeCost();
                 levelUpButton.setNextCost(newCost);
+                if (logic.MoneyManager.getInstance().isMaxLevel()) {
+                    levelUpButton.markMaxLevel();
+                }
                 return true;
             }
             return false;
@@ -251,6 +263,10 @@ public class Main extends Application {
         BattleManager.getInstance().addEnemyUnit(dogTower);
 
         root.getChildren().addAll(canvas, gameUI);
+
+        String stageBgm = (selectedStage instanceof Thailand) ? "/music/004.ogg" : "/music/003.ogg";
+        startGameMusic(stageBgm);
+
         startGameThread(gc);
     }
 
@@ -305,15 +321,7 @@ public class Main extends Application {
 
             // 🌟 3. อัปเดตปุ่ม Level Up ด้วย
             if (levelUpButton != null) {
-                // ถ้าอัปเกรดจนตันแล้ว ให้ปุ่มปิดการใช้งานไปเลย
-                if (logic.MoneyManager.getInstance().isMaxLevel()) {
-                    levelUpButton.setDisable(true);
-                    levelUpButton.setText("MAX LVL");
-                    levelUpButton.setOpacity(0.5);
-                } else {
-                    // ถ้ายังไม่ตัน ก็อัปเดตสถานะตามเงินปกติ
-                    levelUpButton.updateState(currentMoney);
-                }
+                levelUpButton.updateState(currentMoney);
             }
         });
 
@@ -341,6 +349,7 @@ public class Main extends Application {
             }
             pendingGameOverText = "YOU LOSE!";
             gameOverCountdown = 150;
+            playResultMusic("/music/009.ogg");
         }
         if (dogTower.isDead() && !dogTowerDestroyedHandled) {
             dogTowerDestroyedHandled = true;
@@ -349,6 +358,7 @@ public class Main extends Application {
             }
             pendingGameOverText = "YOU WIN!";
             gameOverCountdown = 150;
+            playResultMusic("/music/008.ogg");
         }
 
         // During countdown: spawn burst explosions on dead tower every 12 frames
@@ -488,6 +498,7 @@ public class Main extends Application {
         StackPane mainMenuBtn = makeLabelledButton(pauseBtnImg, "RETURN TO MAP", 220, 50);
         mainMenuBtn.setOnMouseClicked(e -> {
             running = false;
+            stopGameMusic();
             showLevelSelection();
         });
 
@@ -496,9 +507,73 @@ public class Main extends Application {
         root.getChildren().add(overlay);
     }
 
+    private Clip openClip(String path) throws Exception {
+        AudioInputStream raw = AudioSystem.getAudioInputStream(
+                Objects.requireNonNull(getClass().getResource(path)));
+        AudioFormat base = raw.getFormat();
+        AudioFormat pcm = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, base.getSampleRate(),
+                16, base.getChannels(), base.getChannels() * 2, base.getSampleRate(), false);
+        AudioInputStream pcmStream = AudioSystem.getAudioInputStream(pcm, raw);
+        Clip clip = AudioSystem.getClip();
+        clip.open(pcmStream);
+        FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+        gain.setValue(-25.0f);
+        return clip;
+    }
+
+    private void startMenuMusic() {
+        if (menuMusicClip != null && menuMusicClip.isRunning()) return;
+        try {
+            if (menuMusicClip != null) { menuMusicClip.stop(); menuMusicClip.close(); }
+            menuMusicClip = openClip("/music/001.ogg");
+            menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            menuMusicClip.start();
+        } catch (Exception e) {
+            System.out.println("Could not play menu music: " + e.getMessage());
+        }
+    }
+
+    private void stopMenuMusic() {
+        if (menuMusicClip != null) {
+            menuMusicClip.stop();
+            menuMusicClip.close();
+            menuMusicClip = null;
+        }
+    }
+
+    private void startGameMusic(String path) {
+        try {
+            if (gameMusicClip != null) { gameMusicClip.stop(); gameMusicClip.close(); }
+            gameMusicClip = openClip(path);
+            gameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            gameMusicClip.start();
+        } catch (Exception e) {
+            System.out.println("Could not play game music: " + e.getMessage());
+        }
+    }
+
+    private void stopGameMusic() {
+        if (gameMusicClip != null) {
+            gameMusicClip.stop();
+            gameMusicClip.close();
+            gameMusicClip = null;
+        }
+    }
+
+    private void playResultMusic(String path) {
+        stopGameMusic();
+        try {
+            gameMusicClip = openClip(path);
+            gameMusicClip.start(); // play once, no loop
+        } catch (Exception e) {
+            System.out.println("Could not play result music: " + e.getMessage());
+        }
+    }
+
     private void showMainMenu() {
         root.getChildren().clear();
         running = false;
+        startMenuMusic();
 
         Pane menuPane = new Pane();
         menuPane.setPrefSize(SCREEN_WIDTH, 600);
@@ -540,6 +615,7 @@ public class Main extends Application {
 
     private void showLevelSelection() {
         root.getChildren().clear();
+        startMenuMusic();
 
         Pane mapPane = new Pane();
         mapPane.setPrefSize(SCREEN_WIDTH, 600);
@@ -679,7 +755,7 @@ public class Main extends Application {
 
             Image menuBtnImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/button.png")));
             StackPane menuBtn = makeLabelledButton(menuBtnImg, "RETURN TO MAP", 260, 55);
-            menuBtn.setOnMouseClicked(e -> { running = false; showLevelSelection(); });
+            menuBtn.setOnMouseClicked(e -> { running = false; stopGameMusic(); showLevelSelection(); });
 
             box.getChildren().addAll(resultLabel, menuBtn);
             overlay.getChildren().add(box);

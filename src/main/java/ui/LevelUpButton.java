@@ -16,6 +16,7 @@ public class LevelUpButton extends Button {
 
     private int currentLevel = 1;
     private int currentCost;
+    private boolean maxLevel = false;
     private Label textLabel;
     private ImageView icon; // 🌟 ย้ายมาประกาศตรงนี้เพื่อให้เรียกใช้ใน updateState ได้
 
@@ -65,9 +66,19 @@ public class LevelUpButton extends Button {
     }
 
     private void updateText() {
-        if (textLabel != null) {
+        if (textLabel == null) return;
+        if (maxLevel) {
+            textLabel.setText("MAX LEVEL");
+        } else {
             textLabel.setText("Lv." + currentLevel + " | $" + currentCost);
         }
+    }
+
+    public void markMaxLevel() {
+        maxLevel = true;
+        if (icon != null) icon.setOpacity(1.0);
+        this.setDisable(true);
+        updateText();
     }
 
     public void setNextCost(int newCost) {
@@ -77,6 +88,7 @@ public class LevelUpButton extends Button {
 
     // 🌟 แก้ไข Logic ตรงนี้ใหม่
     public void updateState(int playerMoney) {
+        if (maxLevel) return;
         if (playerMoney < currentCost) {
             // ลดความสว่างเฉพาะตัวรูป (Icon)
             if (icon != null) icon.setOpacity(0.5);
