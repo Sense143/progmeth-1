@@ -295,7 +295,7 @@ public class Main extends Application {
 
         root.getChildren().addAll(canvas, gameUI);
 
-        String stageBgm = (selectedStage instanceof Thailand) ? "/music/004.ogg" : "/music/003.ogg";
+        String stageBgm = (selectedStage instanceof Thailand) ? "/music/004.mp3" : "/music/003.mp3";
         startGameMusic(stageBgm);
 
         startGameThread(gc);
@@ -404,7 +404,7 @@ public class Main extends Application {
             }
             pendingGameOverText = "YOU LOSE!";
             gameOverCountdown = 150;
-            playResultMusic("/music/009.ogg");
+            playResultMusic("/music/009.mp3");
         }
         if (dogTower.isDead() && !dogTowerDestroyedHandled) {
             dogTowerDestroyedHandled = true;
@@ -413,7 +413,7 @@ public class Main extends Application {
             }
             pendingGameOverText = "YOU WIN!";
             gameOverCountdown = 150;
-            playResultMusic("/music/008.ogg");
+            playResultMusic("/music/008.mp3");
         }
 
         // During countdown: spawn burst explosions on dead tower every 12 frames
@@ -628,7 +628,7 @@ public class Main extends Application {
         if (menuMusicClip != null && menuMusicClip.isRunning()) return;
         try {
             if (menuMusicClip != null) { menuMusicClip.stop(); menuMusicClip.close(); }
-            menuMusicClip = openClip("/music/001.ogg");
+            menuMusicClip = openClip("/music/001.mp3");
             menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
             menuMusicClip.start();
         } catch (Exception e) {

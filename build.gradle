@@ -52,3 +52,11 @@ application {
     // สมมติว่าคลาสหลักชื่อ Main และอยู่ใน package application (ลองเช็คในโปรเจกต์คุณดูนะครับ)
     mainClass = 'application.Main'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'application.Main' // 🌟 เปลี่ยนเป็น Path ของคลาสที่มี public static void main ของคุณ
+        )
+    }
+}
