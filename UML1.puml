@@ -1,0 +1,60 @@
+@startuml
+class application.Main {
+- StackPane root
+- Label moneyLabel
+- ArrayList<CatButton> catButtons
+- ArrayList<Unit> units
+- Tower catTower
+- Tower dogTower
+- boolean isPaused
+- boolean running
+- Thread gameThread
+- GameStage selectedStage
+- ArrayList<models.base.CannonWave> activeWaves
+- Image towerNormal
+- Image towerFire
+- double WORLD_WIDTH
+- double SCREEN_WIDTH
+- double cameraX
+- double dragLastX
+- ui.LevelUpButton levelUpButton
+- boolean catTowerDestroyedHandled
+- boolean dogTowerDestroyedHandled
+- int gameOverCountdown
+- String pendingGameOverText
+- ArrayList<models.base.TowerBurstEffect> burstEffects
+- java.util.Random rng
+- boolean isGameOver
+- MediaPlayer menuMusicPlayer
+- MediaPlayer gameMusicPlayer
+- int postGameFrame
+- double catTowerShakeX
+- double dogTowerShakeX
++ <<Create>> Main()
++ void start(Stage)
+- void showGameScene()
+- void startGameThread(GraphicsContext)
+- void updateLogic()
+- void render(GraphicsContext)
+- boolean trySpawnUnit(Unit,int)
+- void spawnPlayerUnit(Unit)
+- void showPauseOverlay()
+- MediaPlayer openPlayer(String)
+- void startMenuMusic()
+- void stopMenuMusic()
+- void startGameMusic(String)
+- void stopGameMusic()
+- void playResultMusic(String)
+- void showMainMenu()
+- void showLevelSelection()
+- void spawnTowerBurst(models.base.Tower)
+- StackPane makeLabelledButton(Image,String,double,double)
+- void gameOver(String)
++ {static} void main(String[])
+}
+
+
+
+
+javafx.application.Application <|-- application.Main
+@enduml

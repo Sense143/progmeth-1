@@ -1,0 +1,55 @@
+@startuml
+class logic.EffectManager {
+- {static} EffectManager instance
+- ArrayList<ExplosionEffect> activeEffects
+- <<Create>> EffectManager()
++ {static} EffectManager getInstance()
++ void spawnExplosion(double,double)
++ void drawAll(GraphicsContext,double)
+}
+
+
+class logic.MoneyManager {
+- {static} MoneyManager instance
+- double currentMoney
+- int maxMoney
+- int moneyLevel
+- int MAX_LEVEL
+- int upgradeCost
+- double generationRate
+~ int previousMoney
+- <<Create>> MoneyManager()
++ {static} MoneyManager getInstance()
++ void reset()
+- void updateStats()
++ void update()
++ boolean spend(int)
++ boolean upgradeWallet()
++ int getCurrentMoney()
++ int getMaxMoney()
++ int getMoneyLevel()
++ int getUpgradeCost()
++ boolean isMaxLevel()
+}
+
+
+class logic.BattleManager {
+- {static} BattleManager instance
+- ArrayList<Unit> playerUnits
+- ArrayList<Unit> enemyUnits
+- <<Create>> BattleManager()
++ {static} BattleManager getInstance()
++ ArrayList<Unit> findMultipleTargetsInRange(Unit)
++ ArrayList<Unit> getEveryTargetOnBoard()
++ Unit findSingleTargetInRange(Unit)
+- boolean isPlayerUnit(Unit)
++ void addPlayerUnit(Unit)
++ void addEnemyUnit(Unit)
++ void removeUnit(Unit)
++ ArrayList<Unit> getPlayerUnits()
++ ArrayList<Unit> getEnemyUnits()
++ void clearAll()
+}
+
+
+@enduml

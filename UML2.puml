@@ -1,0 +1,13 @@
+@startuml
+interface interfaces.Attackable {
+~ void takeDamage(double)
+~ void Attack(ArrayList<Unit>)
+~ void Attack(Unit)
+~ boolean isDead()
+}
+
+interface interfaces.Moveable {
+~ void move()
+}
+
+@enduml

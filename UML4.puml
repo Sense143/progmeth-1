@@ -1,0 +1,309 @@
+@startuml
+class models.enemies.Stickman {
++ <<Create>> Stickman()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.stages.Vietnam {
++ <<Create>> Vietnam()
+# void spawnEnemyLogic(ArrayList<Unit>)
++ String getEnemyTowerImagePath()
+}
+
+class models.units.KnightCat {
++ <<Create>> KnightCat()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.stages.China {
++ <<Create>> China()
+# void spawnEnemyLogic(ArrayList<Unit>)
++ String getEnemyTowerImagePath()
+}
+
+class models.units.FishCat {
++ <<Create>> FishCat()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.units.Cat1 {
++ <<Create>> Cat1()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.base.CannonWave {
+- double x
+- double y
+- double STEP_SIZE
+- double WAVE_WIDTH
+- double damage
+- int currentFrame
+- int frameCounter
+- int ANIMATION_DELAY
+- Image[] frames
+- boolean active
+- HashSet<Unit> hitUnits
++ <<Create>> CannonWave(double)
++ void update()
++ void draw(GraphicsContext,double)
++ boolean isActive()
+}
+
+
+class models.enemies.Dog1 {
++ <<Create>> Dog1()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.base.Tower {
+- double maxHp
++ <<Create>> Tower(String,double,double)
++ double getMaxHp()
++ void update()
++ double getRenderWidth()
++ double getRenderHeight()
++ void takeDamage(double)
++ void Attack(ArrayList<Unit>)
++ void Attack(Unit)
++ boolean isDead()
+}
+
+
+class models.enemies.Snake {
++ <<Create>> Snake()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.base.AoeUnit {
++ <<Create>> AoeUnit(String,double,double,double,double,double,double)
++ void takeDamage(double)
++ void Attack(ArrayList<Unit>)
++ void Attack(Unit)
++ boolean isDead()
++ void move()
++ void update()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.stages.Korea {
++ <<Create>> Korea()
+# void spawnEnemyLogic(ArrayList<Unit>)
++ String getEnemyTowerImagePath()
+}
+
+class models.units.CatTower {
+- Image sprite
++ <<Create>> CatTower()
++ Image getCurrentSprite()
++ double getRenderWidth()
++ double getRenderHeight()
++ double getRimPosition()
+}
+
+
+class models.enemies.Hippo {
++ <<Create>> Hippo()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.units.TofuCat {
++ <<Create>> TofuCat()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+abstract class models.base.Unit {
+# String name
+# double x
+# double hp
+# double attackDamage
+# double attackCooldown
+# double attackRange
+# double speed
+# boolean isAttacking
+# boolean isAoe
+# long lastAttackTime
+# double attackRangeMin
+# boolean hasDealtDamageThisAttack
+# ArrayList<Unit> currentTargets
++ boolean completelyDead
+# State currentState
+# Image[] walkSprites
+# Image[] attackSprites
+# Image idleSprite
+# Image knockbackSprite
+# {static} Image[] sharedSoulSprites
+# int currentFrame
+# int animTick
+# int animSpeed
+# int deadFrameCounter
+# double yOffset
+# double soulTimer
+# Image customSprite
++ <<Create>> Unit(String,double,double,double,double,double,double)
++ void setCurrentSprite(Image)
++ void takeDamage(double)
++ double getX()
++ double getYOffset()
++ double getHp()
++ void setHp(double)
++ void setX(double)
++ double getAttackRange()
++ void setAttackRange(double)
++ double getAttackRangeMin()
++ double getSpeed()
++ {abstract}void update()
+# void updateAnimation()
++ Image getCurrentSprite()
++ void setState(State)
++ {abstract}double getRenderWidth()
++ {abstract}double getRenderHeight()
++ double getRimPosition()
+# void processAttackDamage()
+# void loadSharedSoulSprites()
++ boolean isDeadSoul()
+}
+
+
+enum models.base.State {
++  WALK
++  ATTACK
++  IDLE
++  DEAD_KNOCKBACK
++  DEAD_SOUL
+}
+
+class models.units.UFOCat {
+- boolean isWaveActive
+- int currentWaveStep
+- long lastWaveTime
+- double WAVE_WIDTH
+- double MAX_WAVE_RANGE
++ <<Create>> UFOCat()
++ void update()
+- void executeWaveStep(int)
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+
+class models.stages.Japan {
++ <<Create>> Japan()
+# void spawnEnemyLogic(ArrayList<Unit>)
++ String getEnemyTowerImagePath()
+}
+
+class models.base.SingleTargetUnit {
++ <<Create>> SingleTargetUnit(String,double,double,double,double,double,double)
++ void takeDamage(double)
++ void Attack(ArrayList<Unit>)
++ void Attack(Unit)
++ boolean isDead()
++ void move()
++ void update()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.enemies.Pig {
++ <<Create>> Pig()
++ double getRenderWidth()
++ double getRenderHeight()
+}
+
+class models.enemies.DogTower {
+- Image sprite
++ <<Create>> DogTower(double,String)
++ Image getCurrentSprite()
++ double getRenderWidth()
++ double getRenderHeight()
++ double getRimPosition()
+}
+
+
+class models.stages.Thailand {
+~ int newFrameCount
+- boolean isPigArmySpawned
++ <<Create>> Thailand()
+# void spawnEnemyLogic(ArrayList<Unit>)
++ String getEnemyTowerImagePath()
+}
+
+
+class models.base.TowerBurstEffect {
+- double x
+- {static} Image[] sharedFrames
+- int currentFrame
+- int frameTick
+- {static} int FRAME_DELAY
+- boolean finished
++ <<Create>> TowerBurstEffect(double,double)
++ void draw(GraphicsContext,double)
++ boolean isFinished()
+}
+
+
+class models.base.ExplosionEffect {
+- double x
+- Image[] frames
+- int currentFrame
+- long lastFrameTime
+- int frameDelay
+- boolean finished
++ <<Create>> ExplosionEffect(double,double)
++ void draw(GraphicsContext,double)
++ boolean isFinished()
+}
+
+
+abstract class models.stages.GameStage {
+# String stageName
+# double enemyTowerHp
+# Image backgroundImage
+# int frameCount
++ <<Create>> GameStage(String,double,String)
++ String getStageName()
++ double getEnemyTowerHp()
++ Image getBackgroundImage()
++ void updateStage(ArrayList<Unit>,double)
+# {abstract}void spawnEnemyLogic(ArrayList<Unit>)
++ {abstract}String getEnemyTowerImagePath()
+}
+
+
+
+
+models.base.SingleTargetUnit <|-- models.enemies.Stickman
+models.stages.GameStage <|-- models.stages.Vietnam
+models.base.SingleTargetUnit <|-- models.units.KnightCat
+models.stages.GameStage <|-- models.stages.China
+models.base.SingleTargetUnit <|-- models.units.FishCat
+models.base.SingleTargetUnit <|-- models.units.Cat1
+models.base.SingleTargetUnit <|-- models.enemies.Dog1
+models.base.Unit <|-- models.base.Tower
+models.base.SingleTargetUnit <|-- models.enemies.Snake
+interfaces.Attackable <|.. models.base.AoeUnit
+interfaces.Moveable <|.. models.base.AoeUnit
+models.base.Unit <|-- models.base.AoeUnit
+models.stages.GameStage <|-- models.stages.Korea
+models.base.Tower <|-- models.units.CatTower
+models.base.SingleTargetUnit <|-- models.enemies.Hippo
+models.base.AoeUnit <|-- models.units.TofuCat
+interfaces.Attackable <|.. models.base.Unit
+models.base.AoeUnit <|-- models.units.UFOCat
+models.stages.GameStage <|-- models.stages.Japan
+interfaces.Attackable <|.. models.base.SingleTargetUnit
+interfaces.Moveable <|.. models.base.SingleTargetUnit
+models.base.Unit <|-- models.base.SingleTargetUnit
+models.base.AoeUnit <|-- models.enemies.Pig
+models.base.Tower <|-- models.enemies.DogTower
+models.stages.GameStage <|-- models.stages.Thailand
+@enduml

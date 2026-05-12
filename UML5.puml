@@ -1,0 +1,40 @@
+@startuml
+class ui.CatButton {
+- boolean isCooldown
+- int cost
+- Rectangle moneyDim
++ <<Create>> CatButton(String,double,int,BooleanSupplier)
++ void updateState(int)
+}
+
+
+class ui.LevelUpButton {
+- int currentLevel
+- int currentCost
+- boolean maxLevel
+- Label textLabel
+- ImageView icon
++ <<Create>> LevelUpButton(String,int,BooleanSupplier)
+- void updateText()
++ void markMaxLevel()
++ void setNextCost(int)
++ void updateState(int)
+}
+
+
+class ui.CannonButton {
+- boolean isReady
+- ImageView icon
+- Image readyImage
+- Image cooldownImage
++ <<Create>> CannonButton(String,double,Runnable)
+- void startCooldown(double)
+}
+
+
+
+
+javafx.scene.layout.StackPane <|-- ui.CatButton
+javafx.scene.control.Button <|-- ui.LevelUpButton
+javafx.scene.layout.StackPane <|-- ui.CannonButton
+@enduml
