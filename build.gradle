@@ -20,7 +20,6 @@ javafx {
 dependencies {
     // ถ้าอนาคตอยากใช้ JSON เก็บค่าพลังตัวละคร ให้เพิ่มตรงนี้
     // implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'com.googlecode.soundlibs:vorbisspi:1.0.3.3'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -55,8 +54,6 @@ application {
 
 jar {
     manifest {
-        attributes(
-                'Main-Class': 'application.Main' // 🌟 เปลี่ยนเป็น Path ของคลาสที่มี public static void main ของคุณ
-        )
+        attributes 'Main-Class': 'application.Main'
     }
 }

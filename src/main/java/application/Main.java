@@ -3,11 +3,8 @@ package application;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.FloatControl;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -36,25 +33,22 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 /**
- * Main entry point and primary controller for Battle Cat - Complete Edition.
+ * Main application class and top-level controller for Battle Cat - Complete Edition.
  *
- * <p>This class owns the JavaFX {@link javafx.stage.Stage}, manages scene
- * transitions (main menu → level selection → battle), drives the 60 FPS game
- * loop on a background daemon thread, handles all rendering onto a
- * {@link javafx.scene.canvas.Canvas}, and manages background music playback
- * via {@code javax.sound.sampled.Clip} with OGG support from vorbisspi.
- *
- * <p>Key responsibilities:
+ * <p>Responsibilities:
  * <ul>
- *   <li>Scene lifecycle: {@link #showMainMenu()}, {@link #showLevelSelection()},
- *       {@link #showGameScene()}, {@link #gameOver(String)}</li>
- *   <li>Game loop: {@link #startGameThread(GraphicsContext)},
- *       {@link #updateLogic()}, {@link #render(GraphicsContext)}</li>
- *   <li>Unit spawning: {@link #trySpawnUnit(Unit, int)},
- *       {@link #spawnPlayerUnit(Unit)}</li>
- *   <li>Audio: {@link #startMenuMusic()}, {@link #stopMenuMusic()},
- *       {@link #startGameMusic(String)}, {@link #stopGameMusic()},
- *       {@link #playResultMusic(String)}</li>
+ *   <li><b>Scene management</b> – owns the primary {@link Stage} and drives
+ *       transitions between the title screen, world-map level selection, and
+ *       the battle scene ({@link #showMainMenu()}, {@link #showLevelSelection()},
+ *       {@link #showGameScene()}, {@link #gameOver(String)}).</li>
+ *   <li><b>Game loop</b> – runs a ~60 FPS daemon thread that calls
+ *       {@link #updateLogic()} each tick and schedules {@link #render(GraphicsContext)}
+ *       on the JavaFX Application Thread via {@link Platform#runLater}.</li>
+ *   <li><b>Rendering</b> – draws the scrollable world, all units, cannon waves,
+ *       and visual effects onto a {@link Canvas}.</li>
+ *   <li><b>Audio</b> – plays MP3 music through {@link MediaPlayer} (JavaFX Media).
+ *       Resources are extracted to temp files at runtime because JavaFX Media
+ *       requires {@code file:} URIs and cannot read {@code jar:} URIs directly.</li>
  * </ul>
  */
 public class Main extends Application {
@@ -67,72 +61,72 @@ public class Main extends Application {
     private ArrayList<CatButton> catButtons = new ArrayList<>();
     /** All living units on the battlefield, including both towers. */
     private ArrayList<Unit> units = new ArrayList<>();
-    /** Player's home base tower (right side). */
+    /** Player's home base tower (right side of the world). */
     private Tower catTower;
-    /** Enemy base tower (left side). */
+    /** Enemy base tower (left side of the world). */
     private Tower dogTower;
 
-    /** Pause flag; the game loop skips {@link #updateLogic()} when true. */
+    /** When {@code true} the game loop skips {@link #updateLogic()} each tick. */
     private volatile boolean isPaused = false;
-    /** Running flag; set to false to terminate the game loop thread. */
+    /** When {@code false} the game loop thread exits cleanly. */
     private volatile boolean running = false;
     private Thread gameThread;
 
     /** The stage (level) currently loaded or being played. */
     private GameStage selectedStage;
 
-    /** Active cannon-wave projectiles sweeping across the battlefield. */
+    /** Cannon-wave projectiles currently sweeping across the battlefield. */
     private ArrayList<models.base.CannonWave> activeWaves = new ArrayList<>();
-    /** Tower sprite in idle state. */
+    /** Cat-tower sprite displayed when idle. */
     private Image towerNormal = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase.png")));
-    /** Tower sprite shown briefly when the cannon fires. */
+    /** Cat-tower sprite displayed briefly when the cannon fires. */
     private Image towerFire = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/tower/Catbase_firing.png")));
 
     /** Total width of the scrollable game world in pixels. */
     private final double WORLD_WIDTH = 2500;
-    /** Visible screen width in pixels. */
+    /** Visible viewport width in pixels. */
     private final double SCREEN_WIDTH = 1000;
-    /** Current horizontal scroll offset (world X shown at the left edge). */
+    /** Horizontal scroll offset: the world-X coordinate shown at the left edge of the screen. */
     private double cameraX = 0;
-    /** Last recorded mouse X during a drag gesture, for delta calculation. */
+    /** X position of the last mouse-drag event, used to compute drag delta. */
     private double dragLastX = 0;
 
-    /** Wallet upgrade button in the HUD. */
+    /** Wallet-upgrade button in the bottom HUD. */
     private ui.LevelUpButton levelUpButton;
 
-    /** True after the cat tower has been destroyed (guards one-shot handling). */
+    /** Guards the one-shot cat-tower destruction handler. */
     private boolean catTowerDestroyedHandled = false;
-    /** True after the dog tower has been destroyed (guards one-shot handling). */
+    /** Guards the one-shot dog-tower destruction handler. */
     private boolean dogTowerDestroyedHandled = false;
-    /** Countdown frames before the game-over overlay is shown (-1 = inactive). */
+    /** Frames remaining before the game-over overlay appears; {@code -1} while inactive. */
     private int gameOverCountdown = -1;
-    /** "YOU WIN!" or "YOU LOSE!" text queued for display after the countdown. */
+    /** Result string ({@code "YOU WIN!"} or {@code "YOU LOSE!"}) queued for the overlay. */
     private String pendingGameOverText = null;
-    /** Active tower-destruction burst effects rendered on top of everything. */
+    /** Tower-destruction burst particles currently being rendered. */
     private ArrayList<models.base.TowerBurstEffect> burstEffects = new ArrayList<>();
     private java.util.Random rng = new java.util.Random();
-    /** True once the game-over overlay has been displayed. */
+    /** {@code true} once the game-over overlay has been shown; freezes logic updates. */
     private boolean isGameOver = false;
 
-    /** Looping background music clip for menus. */
-    private Clip menuMusicClip;
-    /** Background music clip for the current stage (or result jingle). */
-    private Clip gameMusicClip;
-    /** Frame counter used during the post-game burst-explosion sequence. */
+    /** Looping background music player used on the menu and level-selection screens. */
+    private MediaPlayer menuMusicPlayer;
+    /** Background music player for the active stage, or the result jingle after the battle. */
+    private MediaPlayer gameMusicPlayer;
+    /** Frame counter that drives the post-game burst-explosion animation. */
     private int postGameFrame = 0;
-    /** Horizontal shake offset for the cat tower during destruction. */
+    /** Screen-space shake offset applied to the cat tower while it is being destroyed. */
     private double catTowerShakeX = 0;
-    /** Horizontal shake offset for the dog tower during destruction. */
+    /** Screen-space shake offset applied to the dog tower while it is being destroyed. */
     private double dogTowerShakeX = 0;
 
-    /** Default constructor required by the JavaFX {@link Application} lifecycle. */
+    /** No-arg constructor required by the JavaFX {@link Application} launch mechanism. */
     public Main() {}
 
     /**
-     * JavaFX application entry point. Builds the root pane, shows the main
-     * menu, and configures the primary stage.
+     * JavaFX entry point called after the toolkit is initialised.
+     * Creates the root pane, shows the title screen, and presents the primary window.
      *
-     * @param primaryStage the top-level window provided by the JavaFX runtime
+     * @param primaryStage the top-level window supplied by the JavaFX runtime
      */
     @Override
     public void start(Stage primaryStage) {
@@ -146,13 +140,13 @@ public class Main extends Application {
     }
 
     /**
-     * Builds and displays the in-game battle scene for {@link #selectedStage}.
+     * Builds and activates the in-game battle scene for the currently selected stage.
      *
-     * <p>Clears all previous state, resets {@link logic.MoneyManager} and
-     * {@link logic.BattleManager}, constructs the HUD (top bar, unit buttons,
-     * wallet upgrade button, cannon button), places the towers, then starts the
-     * game loop via {@link #startGameThread(GraphicsContext)}.
-     * Stage-appropriate background music is started here.
+     * <p>Clears all previous state (units, buttons, effects), resets
+     * {@link logic.MoneyManager} and {@link logic.BattleManager}, constructs the
+     * HUD (top bar with money label, bottom tray with unit buttons, wallet-upgrade
+     * button, and cannon button), places both towers, starts stage-appropriate
+     * background music, then launches the game loop.
      */
     private void showGameScene() {
         stopMenuMusic();
@@ -302,12 +296,12 @@ public class Main extends Application {
     }
 
     /**
-     * Spawns a daemon background thread that drives the game loop at ~60 FPS.
-     * Each iteration calls {@link #updateLogic()} then schedules
-     * {@link #render(GraphicsContext)} on the JavaFX application thread via
-     * {@link Platform#runLater}.
+     * Spawns a daemon background thread that drives the game loop at approximately 60 FPS.
+     * Each tick calls {@link #updateLogic()}, then posts {@link #render(GraphicsContext)}
+     * to the JavaFX Application Thread via {@link Platform#runLater}.
+     * The loop exits when {@link #running} is set to {@code false}.
      *
-     * @param gc the graphics context for the battle canvas
+     * @param gc the {@link GraphicsContext} of the battle canvas to render into
      */
     private void startGameThread(GraphicsContext gc) {
         gameThread = new Thread(() -> {
@@ -329,19 +323,24 @@ public class Main extends Application {
     }
 
     /**
-     * Per-frame game logic update. Called from the game loop thread.
+     * Advances all game state by one frame. Invoked from the game loop thread.
      *
-     * <p>Responsibilities (in order):
+     * <p>Execution order each frame:
      * <ol>
-     *   <li>If game is over: animate units and spawn burst effects on the dead
-     *       tower, then return.</li>
-     *   <li>Advance the stage's enemy-spawn schedule.</li>
-     *   <li>Tick {@link logic.MoneyManager} and refresh all HUD buttons.</li>
-     *   <li>Update every unit; remove dead non-tower units from the board.</li>
-     *   <li>Update all active cannon waves; remove finished ones.</li>
-     *   <li>Detect first frame a tower dies: freeze enemy units, queue the
-     *       game-over text, start the result music, and begin the countdown.</li>
-     *   <li>Count down to game-over; when it reaches 0, call {@link #gameOver}.</li>
+     *   <li>If {@link #isGameOver}: animate surviving units and spawn burst explosions
+     *       on the destroyed tower, then return early.</li>
+     *   <li>Advance the selected stage's enemy-spawn schedule.</li>
+     *   <li>Tick {@link logic.MoneyManager}; post a HUD-button affordability update
+     *       to the JavaFX thread.</li>
+     *   <li>Update every unit; remove dead non-tower units from the board and
+     *       from {@link BattleManager}.</li>
+     *   <li>Advance all active {@link CannonWave}s; remove finished ones.</li>
+     *   <li>On the first frame a tower reaches 0 HP: zero out all allied units on
+     *       that side, set the result string, start the result jingle, and begin
+     *       the 150-frame game-over countdown.</li>
+     *   <li>While the countdown is active: emit burst particles every 12 frames and
+     *       shake the dead tower every 3 frames. When the counter reaches 0, call
+     *       {@link #gameOver(String)}.</li>
      * </ol>
      */
     private void updateLogic() {
@@ -432,20 +431,21 @@ public class Main extends Application {
     }
 
     /**
-     * Renders the current game state onto the battle canvas. Called from the
-     * JavaFX application thread via {@link Platform#runLater} each frame.
+     * Draws the current frame onto the battle canvas.
+     * Must be called on the JavaFX Application Thread.
      *
      * <p>Drawing order:
      * <ol>
-     *   <li>Background image (or fallback solid colour).</li>
-     *   <li>All units (towers drawn with HP text; living/dead units drawn with
-     *       their current sprite and optional shake offsets).</li>
-     *   <li>Active cannon waves.</li>
-     *   <li>UFOCat explosion effects via {@link logic.EffectManager}.</li>
-     *   <li>Tower destruction burst effects.</li>
+     *   <li>Stage background image, or a solid {@link Color#WHITESMOKE} fallback.</li>
+     *   <li>Each unit: towers are drawn with their HP overlay and an optional
+     *       horizontal shake; regular units use their current sprite and Y-offset,
+     *       with a smaller soul sprite substituted when dead.</li>
+     *   <li>All active {@link CannonWave} projectiles.</li>
+     *   <li>UFOCat explosion particles via {@link logic.EffectManager}.</li>
+     *   <li>Tower-destruction burst particles.</li>
      * </ol>
      *
-     * @param gc the graphics context for the battle canvas
+     * @param gc the {@link GraphicsContext} of the battle canvas
      */
     private void render(GraphicsContext gc) {
         // อัปเดตตัวเลขกระเป๋าเงิน
@@ -534,12 +534,12 @@ public class Main extends Application {
     }
 
     /**
-     * Attempts to spend money and spawn a player unit onto the battlefield.
-     * Returns {@code false} without spawning if the game is already over or
-     * the player cannot afford the cost.
+     * Deducts {@code cost} from the player's wallet and spawns {@code cat} on the
+     * battlefield. Returns {@code false} without spawning if the game has already
+     * ended or the player cannot afford the cost.
      *
-     * @param cat  the pre-constructed unit to spawn on success
-     * @param cost the money cost to deduct
+     * @param cat  the pre-constructed unit instance to deploy
+     * @param cost the amount of money to deduct on success
      * @return {@code true} if the unit was spawned and money was spent
      */
     private boolean trySpawnUnit(Unit cat, int cost) {
@@ -553,10 +553,10 @@ public class Main extends Application {
     }
 
     /**
-     * Adds a player unit to the live unit list and registers it with
-     * {@link logic.BattleManager} so enemies can target it.
+     * Adds a player-side unit to the live unit list and registers it with
+     * {@link BattleManager} so that enemy units can target it.
      *
-     * @param cat the unit to add
+     * @param cat the unit to add to the battlefield
      */
     private void spawnPlayerUnit(Unit cat) {
         units.add(cat);
@@ -564,9 +564,10 @@ public class Main extends Application {
     }
 
     /**
-     * Pauses the game loop and displays a semi-transparent pause overlay with
-     * "CONTINUE" and "RETURN TO MAP" buttons. Resuming removes the overlay and
-     * clears the pause flag; returning to the map stops game music.
+     * Pauses the game loop and shows a semi-transparent overlay with
+     * <em>CONTINUE</em> and <em>RETURN TO MAP</em> buttons.
+     * Pressing CONTINUE removes the overlay and resumes the loop.
+     * Pressing RETURN TO MAP stops music and navigates to level selection.
      */
     private void showPauseOverlay() {
         isPaused = true;
@@ -597,105 +598,110 @@ public class Main extends Application {
     }
 
     /**
-     * Opens and decodes an OGG audio file from the classpath into a
-     * {@link Clip} ready for playback. Volume is reduced by 25 dB from the
-     * default to avoid clipping.
+     * Loads a classpath MP3 resource into a {@link MediaPlayer}.
      *
-     * @param path classpath resource path to the OGG file (e.g. {@code "/music/001.ogg"})
-     * @return an open, ready-to-play {@code Clip}
-     * @throws Exception if the resource cannot be found or decoded
+     * <p>JavaFX {@link Media} requires a {@code file:} URI and cannot read
+     * {@code jar:} URIs, so the resource is first copied to a temporary file.
+     * The temp file is registered for deletion on JVM exit.
+     * Volume is set to 15 % of maximum to prevent audio clipping.
+     *
+     * @param path classpath-relative path to the MP3 (e.g. {@code "/music/001.mp3"})
+     * @return a configured {@link MediaPlayer} ready for playback,
+     *         or {@code null} if the resource cannot be found or loaded
      */
-    private Clip openClip(String path) throws Exception {
-        AudioInputStream raw = AudioSystem.getAudioInputStream(
-                Objects.requireNonNull(getClass().getResource(path)));
-        AudioFormat base = raw.getFormat();
-        AudioFormat pcm = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, base.getSampleRate(),
-                16, base.getChannels(), base.getChannels() * 2, base.getSampleRate(), false);
-        AudioInputStream pcmStream = AudioSystem.getAudioInputStream(pcm, raw);
-        Clip clip = AudioSystem.getClip();
-        clip.open(pcmStream);
-        FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-        gain.setValue(-25.0f);
-        return clip;
+    private MediaPlayer openPlayer(String path) {
+        try {
+            java.io.InputStream in = Objects.requireNonNull(getClass().getResourceAsStream(path));
+            java.nio.file.Path tmp = java.nio.file.Files.createTempFile("battlecat_", ".mp3");
+            tmp.toFile().deleteOnExit();
+            java.nio.file.Files.copy(in, tmp, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            in.close();
+            MediaPlayer player = new MediaPlayer(new Media(tmp.toUri().toString()));
+            player.setVolume(0.15);
+            return player;
+        } catch (Exception e) {
+            System.out.println("Could not load audio: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
-     * Starts the main-menu / level-selection background music ({@code 001.ogg})
-     * in an infinite loop. No-ops if the clip is already running. Stops and
-     * reopens the clip if it was previously paused or closed.
+     * Starts looping background music for the title and level-selection screens
+     * ({@code /music/001.mp3}). No-ops if the track is already playing.
+     * Disposes the previous player before creating a new one.
      */
     private void startMenuMusic() {
-        if (menuMusicClip != null && menuMusicClip.isRunning()) return;
-        try {
-            if (menuMusicClip != null) { menuMusicClip.stop(); menuMusicClip.close(); }
-            menuMusicClip = openClip("/music/001.mp3");
-            menuMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-            menuMusicClip.start();
-        } catch (Exception e) {
-            System.out.println("Could not play menu music: " + e.getMessage());
+        if (menuMusicPlayer != null && menuMusicPlayer.getStatus() == MediaPlayer.Status.PLAYING) return;
+        if (menuMusicPlayer != null) { menuMusicPlayer.stop(); menuMusicPlayer.dispose(); }
+        menuMusicPlayer = openPlayer("/music/001.mp3");
+        if (menuMusicPlayer != null) {
+            menuMusicPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+            menuMusicPlayer.play();
         }
     }
 
     /**
-     * Stops and releases the menu music clip. Safe to call when no menu
-     * music is playing.
+     * Stops and disposes the menu music player.
+     * Safe to call when no menu music is currently playing.
      */
     private void stopMenuMusic() {
-        if (menuMusicClip != null) {
-            menuMusicClip.stop();
-            menuMusicClip.close();
-            menuMusicClip = null;
+        if (menuMusicPlayer != null) {
+            menuMusicPlayer.stop();
+            menuMusicPlayer.dispose();
+            menuMusicPlayer = null;
         }
     }
 
     /**
-     * Starts looping background music for the current stage. Stops any
-     * previously playing game music before opening the new clip.
+     * Starts looping background music for the current battle stage.
+     * Any previously playing game music is stopped and disposed before the new
+     * track begins.
      *
-     * @param path classpath resource path to the OGG track
+     * @param path classpath-relative path to the MP3 track (e.g. {@code "/music/003.mp3"})
      */
     private void startGameMusic(String path) {
-        try {
-            if (gameMusicClip != null) { gameMusicClip.stop(); gameMusicClip.close(); }
-            gameMusicClip = openClip(path);
-            gameMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-            gameMusicClip.start();
-        } catch (Exception e) {
-            System.out.println("Could not play game music: " + e.getMessage());
+        if (gameMusicPlayer != null) { gameMusicPlayer.stop(); gameMusicPlayer.dispose(); }
+        gameMusicPlayer = openPlayer(path);
+        if (gameMusicPlayer != null) {
+            gameMusicPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+            gameMusicPlayer.play();
         }
     }
 
     /**
-     * Stops and releases the game-stage music clip. Safe to call when no
-     * game music is playing.
+     * Stops and disposes the game music player.
+     * Safe to call when no game music is currently playing.
      */
     private void stopGameMusic() {
-        if (gameMusicClip != null) {
-            gameMusicClip.stop();
-            gameMusicClip.close();
-            gameMusicClip = null;
+        if (gameMusicPlayer != null) {
+            gameMusicPlayer.stop();
+            gameMusicPlayer.dispose();
+            gameMusicPlayer = null;
         }
     }
 
     /**
-     * Stops stage music and plays a one-shot win/lose jingle. The clip is
-     * not looped so it stops naturally at the end.
+     * Stops the stage music and plays a one-shot win/lose result jingle.
+     * The jingle plays once with no loop and stops naturally at the end.
      *
-     * @param path classpath resource path to the OGG result track
+     * <p>This method may be called from the game loop thread; it wraps all
+     * {@link MediaPlayer} operations inside {@link Platform#runLater} to satisfy
+     * JavaFX's thread requirement.
+     *
+     * @param path classpath-relative path to the MP3 result track
+     *             (e.g. {@code "/music/008.mp3"} for win, {@code "/music/009.mp3"} for lose)
      */
     private void playResultMusic(String path) {
-        stopGameMusic();
-        try {
-            gameMusicClip = openClip(path);
-            gameMusicClip.start(); // play once, no loop
-        } catch (Exception e) {
-            System.out.println("Could not play result music: " + e.getMessage());
-        }
+        Platform.runLater(() -> {
+            stopGameMusic();
+            gameMusicPlayer = openPlayer(path);
+            if (gameMusicPlayer != null) gameMusicPlayer.play();
+        });
     }
 
     /**
-     * Builds and displays the title screen with a "START" button.
-     * Stops the game loop (if running) and starts menu music.
+     * Builds and displays the title screen with a <em>START</em> button.
+     * Stops the game loop if one is running and starts menu background music.
      */
     private void showMainMenu() {
         root.getChildren().clear();
@@ -742,8 +748,9 @@ public class Main extends Application {
 
     /**
      * Builds and displays the world-map level-selection screen.
-     * Five stage pins are rendered at their geographic positions on the map;
-     * clicking one sets {@link #selectedStage} and calls {@link #showGameScene()}.
+     * Five clickable stage pins are positioned at their geographic locations on the
+     * map image. Clicking a pin sets {@link #selectedStage} and calls
+     * {@link #showGameScene()}. A <em>BACK</em> button returns to the title screen.
      * Menu music continues (or restarts) on this screen.
      */
     private void showLevelSelection() {
@@ -828,11 +835,11 @@ public class Main extends Application {
     }
 
     /**
-     * Spawns a {@link models.base.TowerBurstEffect} at a random position
-     * within the given tower's sprite bounds. Called repeatedly during the
-     * post-death countdown to animate the tower crumbling.
+     * Adds a new {@link models.base.TowerBurstEffect} at a random position within
+     * the given tower's sprite bounds. Called every 12 frames during the
+     * post-destruction countdown to simulate the tower crumbling.
      *
-     * @param tower the tower to spawn burst effects on
+     * @param tower the tower whose bounds are used to position the burst effect
      */
     private void spawnTowerBurst(models.base.Tower tower) {
         double tW = tower.getRenderWidth() > 0 ? tower.getRenderWidth() : 80;
@@ -844,14 +851,15 @@ public class Main extends Application {
     }
 
     /**
-     * Creates a {@link StackPane} that layers a text label over a button image,
-     * with hover-dim feedback. Used for pause-menu and game-over overlay buttons.
+     * Creates a button {@link StackPane} composed of a background image and a
+     * centred text label, with a hover-dim effect.
+     * Used for pause-menu and game-over overlay buttons.
      *
-     * @param btnImg the button background image
-     * @param text   the label text to display centred on the button
-     * @param w      button width in pixels
-     * @param h      button height in pixels
-     * @return the assembled button pane
+     * @param btnImg the image to use as the button background
+     * @param text   the label text displayed on the button
+     * @param w      desired button width in pixels
+     * @param h      desired button height in pixels
+     * @return the assembled {@link StackPane} button node
      */
     private StackPane makeLabelledButton(Image btnImg, String text, double w, double h) {
         javafx.scene.image.ImageView iv = new javafx.scene.image.ImageView(btnImg);
@@ -868,12 +876,12 @@ public class Main extends Application {
     }
 
     /**
-     * Shows the game-over overlay on the JavaFX thread and sets
-     * {@link #isGameOver} so the render loop continues but logic stops.
-     * The overlay contains the result text and a "RETURN TO MAP" button that
-     * stops game music and returns to level selection.
+     * Sets {@link #isGameOver} and posts a game-over overlay to the JavaFX
+     * Application Thread. The overlay shows the result text and a
+     * <em>RETURN TO MAP</em> button that stops music and navigates to level selection.
+     * The render loop continues after this call so burst animations keep playing.
      *
-     * @param resultText "YOU WIN!" or "YOU LOSE!"
+     * @param resultText the result message to display ({@code "YOU WIN!"} or {@code "YOU LOSE!"})
      */
     private void gameOver(String resultText) {
         isGameOver = true;
@@ -898,9 +906,9 @@ public class Main extends Application {
     }
 
     /**
-     * Application entry point. Delegates to {@link Application#launch}.
+     * Application entry point. Delegates to {@link Application#launch(String[])}.
      *
-     * @param args command-line arguments (ignored)
+     * @param args command-line arguments (not used)
      */
     public static void main(String[] args) {
         launch(args);
