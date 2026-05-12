@@ -1,8 +1,0 @@
-application
-interfaces
-logic
-models.base
-models.enemies
-models.stages
-models.units
-ui
